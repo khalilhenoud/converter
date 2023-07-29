@@ -1,0 +1,1 @@
+build\Debug\converter .\media\LionKeystone.obj

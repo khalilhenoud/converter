@@ -1,0 +1,12 @@
+[submodule "external/serializer"]
+	path = external/serializer
+	url = https://github.com/khalilhenoud/serializer.git
+[submodule "external/assimp"]
+	path = external/assimp
+	url = https://github.com/assimp/assimp.git
+[submodule "external/math"]
+	path = external/math
+	url = https://github.com/khalilhenoud/math.git
+[submodule "external/library"]
+	path = external/library
+	url = https://github.com/khalilhenoud/library.git
