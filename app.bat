@@ -1,1 +1,1 @@
-build\Debug\converter .\media\LionKeystone.obj
+build\Debug\converter .\media\LionKeystone.obj .\cooked\lionKeystone.bin
