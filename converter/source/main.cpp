@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
         auto* bin_material = scene_bin->material_repo.data + i;
         aiMaterial* pMaterial = pScene->mMaterials[i];
         
-        C_STRUCT aiColor4D color;
+        aiColor4D color;
         aiReturn value;
         value = aiGetMaterialColor(pMaterial, AI_MATKEY_COLOR_DIFFUSE, &color);
         copy_color(&bin_material->diffuse, &color, value);
