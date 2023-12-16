@@ -223,6 +223,8 @@ int main(int argc, char *argv[])
           memset(
             scene_bin->texture_repo.data[i].path.data, 0,
             sizeof(scene_bin->texture_repo.data[i].path.data));
+          // only keep the file name.
+          textures[i] = textures[i].substr(textures[i].find_last_of("/\\") + 1);
           memcpy(
             scene_bin->texture_repo.data[i].path.data,
             textures[i].c_str(),
@@ -325,8 +327,8 @@ int main(int argc, char *argv[])
         return total;
       };
 
-      std::function<void(uint32_t&, serializer_model_data_t*, aiNode*)> populate_node = 
-      [&](
+      std::function<void(uint32_t&, serializer_model_data_t*, aiNode*)> 
+      populate_node = [&](
         uint32_t& model_index, 
         serializer_model_data_t* target, 
         aiNode* source) {
@@ -352,7 +354,8 @@ int main(int argc, char *argv[])
         target->models.used = source->mNumChildren;
         for (uint32_t i = 0; i < source->mNumChildren; ++i) {
           aiNode* child = source->mChildren[i];
-          serializer_model_data_t* child_target = scene_bin->model_repo.data + model_index;
+          serializer_model_data_t* child_target = 
+            scene_bin->model_repo.data + model_index;
           target->models.indices[i] = model_index;
           populate_node(model_index, child_target, child);
         }

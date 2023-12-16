@@ -1,1 +1,1 @@
-build\Debug\converter
+build\Debug\converter %*
