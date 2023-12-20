@@ -341,7 +341,8 @@ int main(int argc, char *argv[])
         float data[16] = { 
           transform.a1, transform.a2, transform.a3, transform.a4, 
           transform.b1, transform.b2, transform.b3, transform.b4,
-          transform.c1, transform.c2, transform.c3, transform.c4};
+          transform.c1, transform.c2, transform.c3, transform.c4,
+          transform.d1, transform.d2, transform.d3, transform.d4};
         memcpy(target->transform.data, data, sizeof(float) * 16);
         copy_str(target->name, source->mName.C_Str(), AI_SUCCESS);
 
