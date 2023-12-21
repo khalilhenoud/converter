@@ -13,6 +13,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # add the executable
 add_executable(${PROJECT_NAME} 
 				./source/main.cpp
+        ./source/parsers/nodes.cpp
+        ./source/parsers/meshes.cpp
+        ./source/parsers/materials.cpp
+        ./source/parsers/textures.cpp
 				)
 			
 target_link_libraries(${PROJECT_NAME}
