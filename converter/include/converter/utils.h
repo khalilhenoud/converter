@@ -10,12 +10,14 @@
  */
 #pragma once
 
+#include <cassert>
 #include <vector>
 #include <string>
 #include <assimp/types.h>
 #include <assimp/material.h>
 #include <library/string/fixed_string.h>
 #include <serializer/serializer_scene_data.h>
+#include <filesystem>
 
 
 typedef struct allocator_t allocator_t;
@@ -68,4 +70,43 @@ copy_texture_transform(
     target->u_scale = source->mScaling.x;
     target->v_scale = source->mScaling.y;
   }
+}
+
+inline
+void
+ensure_clean_directory(std::string directory)
+{
+  if (std::filesystem::exists(directory)) {
+    // delete the folder if it already exists.
+    bool success = std::filesystem::remove_all(directory);
+    assert(success && "failed to remove the directory and its content");
+  }
+
+  // create the folder anew.
+  bool success = std::filesystem::create_directory(directory);
+  assert(success && "failed to create the directory");
+}
+
+inline
+std::string
+get_simple_name(std::string path)
+{
+  path = path.substr(path.find_last_of("/\\") + 1);
+  std::string with_extension = path;
+  std::string extension = 
+    with_extension.substr(with_extension.find_last_of("."));
+  return path.substr(0, path.length() - extension.length());
+}
+
+inline
+void
+copy_files(std::string target_dir, std::vector<std::string> files)
+{
+  for (auto& file : files) {
+    auto target_path = file;
+    target_path = target_path.substr(target_path.find_last_of("/\\") + 1);
+    target_path = target_dir + target_path;
+    bool success = std::filesystem::copy_file(file, target_path);
+    assert(success);
+  } 
 }

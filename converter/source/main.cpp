@@ -10,10 +10,10 @@
  */
 #include <iostream>
 #include <vector>
-#include <cassert>
 #include <malloc.h>
 #include <algorithm>
 #include <functional>
+#include <filesystem>
 #include <library/allocator/allocator.h>
 #include <serializer/serializer_bin.h>
 #include <converter/utils.h>
@@ -28,6 +28,7 @@
 
 
 std::vector<uintptr_t> allocated;
+std::string data_folder = "..\\data\\rooms\\";
 
 void* allocate(size_t size)
 {
@@ -56,9 +57,8 @@ void free_block(void* block)
 
 int main(int argc, char *argv[])
 {
-  assert(argc >= 3 && "provide path to mesh file!");
+  assert(argc >= 2 && "provide path to mesh file!");
   const char* mesh_file = argv[1];
-  const char* target_file = argv[2];
 
   allocator_t allocator;
   allocator.mem_alloc = allocate;
@@ -90,8 +90,16 @@ int main(int argc, char *argv[])
     populate_meshes(scene_bin, pScene, &allocator);
     populate_nodes(scene_bin, pScene, &allocator);
 
-    ::serialize_bin(target_file, scene_bin);
-    ::free_bin(scene_bin, &allocator);
+    // get the trimmed file name, since I want to use it to create a folder.
+    std::string name = get_simple_name(mesh_file);
+    std::string target_path = data_folder + name;
+    ensure_clean_directory(target_path);
+    copy_files(target_path + "\\", textures);
+    
+    // serialize the bin file.
+    std::string target_bin = target_path + "\\" + name + ".bin";
+    serialize_bin(target_bin.c_str(), scene_bin);
+    free_bin(scene_bin, &allocator);
   }
   
   assert(allocated.size() == 0);
