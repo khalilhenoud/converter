@@ -57,6 +57,35 @@ copy_color(
 }
 
 inline
+void
+copy_color(
+  serializer_color_data_t* target, 
+  aiColor3D* source, 
+  aiReturn do_copy) 
+{
+  if (do_copy == AI_SUCCESS) {
+    target->data[0] = source->r;
+    target->data[1] = source->g;
+    target->data[2] = source->b;
+    target->data[3] = 1.f;
+  }
+}
+
+inline
+void
+copy_vec3(
+  vector3f* target, 
+  aiVector3D* source, 
+  aiReturn do_copy)
+{
+  if (do_copy == AI_SUCCESS) {
+    target->data[0] = source->x;
+    target->data[1] = source->y;
+    target->data[2] = source->z;
+  }
+}
+
+inline
 void 
 copy_texture_transform(
   serializer_texture_properties_t* target, 

@@ -21,6 +21,7 @@
 #include <converter/parsers/meshes.h>
 #include <converter/parsers/materials.h>
 #include <converter/parsers/textures.h>
+#include <converter/parsers/lights.h>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -87,6 +88,7 @@ int main(int argc, char *argv[])
     auto textures = 
     populate_materials(scene_bin, pScene, &allocator);
     populate_textures(scene_bin, &allocator, textures);
+    populate_lights(scene_bin, pScene, &allocator);
     populate_meshes(scene_bin, pScene, &allocator);
     populate_nodes(scene_bin, pScene, &allocator);
 
