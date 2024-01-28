@@ -35,10 +35,22 @@ populate_lights(
     serializer_light_data_t *current = scene_bin->light_repo.data + i;
     aiLight* pLight = pScene->mLights[i];
 
+    aiQuaternion rotation;
+    aiVector3D position;
+    aiVector3D direction, up;
+    if (auto* node = pScene->mRootNode->FindNode(pLight->mName)) {
+      aiMatrix4x4 &transform = node->mTransformation;
+      position = transform * pLight->mPosition;
+      direction = transform * pLight->mDirection;
+      up = transform * pLight->mUp;
+    }
+    else
+      assert(0);
+
     copy_str(current->name, pLight->mName.C_Str(), AI_SUCCESS);
-    copy_vec3(&current->position, &pLight->mPosition, AI_SUCCESS);
-    copy_vec3(&current->direction, &pLight->mDirection, AI_SUCCESS);
-    copy_vec3(&current->up, &pLight->mUp, AI_SUCCESS);
+    copy_vec3(&current->position, &position, AI_SUCCESS);
+    copy_vec3(&current->direction, &direction, AI_SUCCESS);
+    copy_vec3(&current->up, &up, AI_SUCCESS);
     copy_float(&current->inner_cone, &pLight->mAngleInnerCone, AI_SUCCESS);
     copy_float(&current->outer_cone, &pLight->mAngleOuterCone, AI_SUCCESS);
     copy_float(
