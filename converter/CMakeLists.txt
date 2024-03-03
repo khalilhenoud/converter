@@ -18,6 +18,7 @@ add_executable(${PROJECT_NAME}
         ./source/parsers/materials.cpp
         ./source/parsers/textures.cpp
         ./source/parsers/lights.cpp
+        ./source/parsers/cameras.cpp
 				)
 			
 target_link_libraries(${PROJECT_NAME}

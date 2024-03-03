@@ -22,6 +22,7 @@
 #include <converter/parsers/materials.h>
 #include <converter/parsers/textures.h>
 #include <converter/parsers/lights.h>
+#include <converter/parsers/cameras.h>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -91,6 +92,7 @@ int main(int argc, char *argv[])
     populate_lights(scene_bin, pScene, &allocator);
     populate_meshes(scene_bin, pScene, &allocator);
     populate_nodes(scene_bin, pScene, &allocator);
+    populate_cameras(scene_bin, pScene, &allocator);
 
     // get the trimmed file name, since I want to use it to create a folder.
     std::string name = get_simple_name(mesh_file);
