@@ -10,3 +10,9 @@
 [submodule "external/library"]
 	path = external/library
 	url = https://github.com/khalilhenoud/library.git
+[submodule "external/loaders"]
+	path = external/loaders
+	url = https://github.com/khalilhenoud/loaders.git
+[submodule "external/entity"]
+	path = external/entity
+	url = https://github.com/khalilhenoud/entity.git
