@@ -23,6 +23,8 @@
 #include <converter/parsers/textures.h>
 #include <converter/parsers/lights.h>
 #include <converter/parsers/cameras.h>
+#include <converter/parsers/map.h>
+#include <loaders/loader_map.h>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -57,28 +59,24 @@ void free_block(void* block)
   free(block);
 }
 
-int main(int argc, char *argv[])
+static
+void
+load_assimp(
+  std::string scene_file, 
+  const allocator_t& allocator)
 {
-  assert(argc >= 2 && "provide path to mesh file!");
-  const char* mesh_file = argv[1];
-
-  allocator_t allocator;
-  allocator.mem_alloc = allocate;
-  allocator.mem_cont_alloc = container_allocate;
-  allocator.mem_free = free_block;
-  allocator.mem_alloc_alligned = NULL;
-  allocator.mem_realloc = NULL;
-
   Assimp::Importer Importer;
   const aiScene* pScene = Importer.ReadFile(
-    mesh_file, 
+    scene_file, 
     aiProcess_Triangulate | 
     aiProcess_GenSmoothNormals | 
     aiProcess_FlipUVs | 
     aiProcess_JoinIdenticalVertices);
 
   if (!pScene)
-    printf("Error parsing '%s': '%s'\n", mesh_file, Importer.GetErrorString());
+    printf(
+      "Error parsing '%s': '%s'\n", scene_file.c_str(), 
+      Importer.GetErrorString());
   else {
     printf("Parsing was successful");
 
@@ -95,7 +93,7 @@ int main(int argc, char *argv[])
     populate_cameras(scene_bin, pScene, &allocator);
 
     // get the trimmed file name, since I want to use it to create a folder.
-    std::string name = get_simple_name(mesh_file);
+    std::string name = get_simple_name(scene_file);
     std::string target_path = data_folder + name;
     ensure_clean_directory(target_path);
     copy_files(target_path + "\\", textures);
@@ -105,6 +103,47 @@ int main(int argc, char *argv[])
     serialize_bin(target_bin.c_str(), scene_bin);
     free_bin(scene_bin, &allocator);
   }
+}
+
+static
+void
+load_map(
+  std::string scene_file, 
+  const allocator_t& allocator)
+{
+  loader_map_data_t* map = load_map(scene_file.c_str(), &allocator);
+  serializer_scene_data_t* scene_bin = map_to_bin(map, &allocator);
+  free_map(map, &allocator);
+
+  std::vector<std::string> textures;
+  // get the trimmed file name, since I want to use it to create a folder.
+  std::string name = get_simple_name(scene_file);
+  std::string target_path = data_folder + name;
+  ensure_clean_directory(target_path);
+  copy_files(target_path + "\\", textures);
+
+  // serialize the bin file.
+  std::string target_bin = target_path + "\\" + name + ".bin";
+  serialize_bin(target_bin.c_str(), scene_bin);
+  free_bin(scene_bin, &allocator);
+}
+
+int main(int argc, char *argv[])
+{
+  allocator_t allocator;
+  allocator.mem_alloc = allocate;
+  allocator.mem_cont_alloc = container_allocate;
+  allocator.mem_free = free_block;
+  allocator.mem_alloc_alligned = nullptr;
+  allocator.mem_realloc = nullptr;
+
+  assert(argc >= 2 && "provide path to mesh file!");
+  const char* scene_file = argv[1];
+
+  if (get_extension(scene_file) == "map")
+    load_map(scene_file, allocator);
+  else
+    load_assimp(scene_file, allocator);
   
   assert(allocated.size() == 0);
   return 0;

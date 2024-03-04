@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # add the executable
 add_executable(${PROJECT_NAME} 
 				./source/main.cpp
+        ./source/parsers/map.cpp
         ./source/parsers/nodes.cpp
         ./source/parsers/meshes.cpp
         ./source/parsers/materials.cpp
@@ -24,6 +25,8 @@ add_executable(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
 				PRIVATE serializer
         PRIVATE assimp
+        PRIVATE loaders
+        PRIVATE entity
 				)
 
 target_include_directories(${PROJECT_NAME} PUBLIC 

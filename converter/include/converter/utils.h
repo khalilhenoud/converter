@@ -128,6 +128,17 @@ get_simple_name(std::string path)
 }
 
 inline
+std::string
+get_extension(std::string path)
+{
+  path = path.substr(path.find_last_of("/\\") + 1);
+  std::string with_extension = path;
+  std::string extension = 
+    with_extension.substr(with_extension.find_last_of(".") + 1);
+  return extension;
+}
+
+inline
 void
 copy_files(std::string target_dir, std::vector<std::string> files)
 {
