@@ -16,4 +16,7 @@ typedef struct serializer_scene_data_t serializer_scene_data_t;
 typedef struct loader_map_data_t loader_map_data_t;
 
 serializer_scene_data_t*
-map_to_bin(loader_map_data_t* map, const allocator_t* allocator);
+map_to_bin(
+  const char* scene_file, 
+  loader_map_data_t* map, 
+  const allocator_t* allocator);

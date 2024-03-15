@@ -102,6 +102,16 @@ copy_texture_transform(
 }
 
 inline
+std::vector<std::filesystem::path>
+get_all_files_in_directory(std::string directory)
+{
+  std::vector<std::filesystem::path> files;
+  for (const auto& entry : std::filesystem::directory_iterator(directory))
+    files.push_back(entry.path());
+  return files;
+}
+
+inline
 void
 ensure_clean_directory(std::string directory)
 {

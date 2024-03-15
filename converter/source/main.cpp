@@ -112,7 +112,8 @@ load_map(
   const allocator_t& allocator)
 {
   loader_map_data_t* map = load_map(scene_file.c_str(), &allocator);
-  serializer_scene_data_t* scene_bin = map_to_bin(map, &allocator);
+  serializer_scene_data_t* scene_bin = map_to_bin(
+    scene_file.c_str(), map, &allocator);
   free_map(map, &allocator);
 
   std::vector<std::string> textures;
