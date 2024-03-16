@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <iostream>
 #include <converter/parsers/map.h>
 #include <math/c/vector3f.h>
 #include <math/c/segment.h>
@@ -483,6 +484,14 @@ create_connecting_faces(
   return triangulate_polygon(poly, normal);
 }
 
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+  size_t start_pos = str.find(from);
+  if (start_pos == std::string::npos)
+    return false;
+  str.replace(start_pos, from.length(), to);
+  return true;
+}
+
 static
 std::string
 get_sanitized_texture_name(std::string face_texture)
@@ -490,7 +499,10 @@ get_sanitized_texture_name(std::string face_texture)
   std::string copy = face_texture;
   std::transform(copy.begin(), copy.end(), copy.begin(), 
     [](unsigned char c) { return std::tolower(c); });
-  std::replace(copy.begin(), copy.end(), '*', '#');
+  replace(copy, "*", "star_");
+  replace(copy, "+", "plus_");
+  replace(copy, "-", "minu_");
+  replace(copy, "/", "divd_");
   return copy;
 }
 
@@ -670,7 +682,8 @@ brush_to_faces(
 
     // we choose 2 because we assume the last 2 vertices auto connect, subject
     // to change.
-    assert(edges.size() == 0 || edges.size() >= 2);
+    // TODO: replace this with a warning
+    //assert(edges.size() == 0 || edges.size() >= 2);
 
     // if the edges are valid, create a polygon to fill the gap and add it to
     // cut_faces.
@@ -697,14 +710,16 @@ free_texture_data(
 }
 
 static
-std::unordered_map<std::string, loader_png_data_t*>
+std::vector<std::string>
 load_texture_data(
   const char* scene_file, 
   std::string texture_directory, 
+  std::unordered_map<std::string, loader_png_data_t*>& data,
   std::unordered_map<std::string, uint32_t>& image_paths,
+  std::unordered_map<uint32_t, std::string>& index_to_path,
   const allocator_t* allocator)
 {
-  std::unordered_map<std::string, loader_png_data_t*> data;
+  std::vector<std::string> textures;
 
   std::string directory = scene_file;
   auto iter = directory.find_last_of("\\/");
@@ -712,20 +727,44 @@ load_texture_data(
   std::replace(texture_directory.begin(), texture_directory.end(), '/', '\\');
   directory += texture_directory;
 
+  {
+    // canonical wad file path.
+    std::string wadfile = directory;
+    wadfile += ".wad";
+    auto wad_canonical = std::filesystem::canonical(wadfile).string();
+
+    ensure_clean_directory(directory);
+    auto path = std::filesystem::current_path();
+    std::filesystem::current_path(directory);
+
+    std::string buffer = path.string();
+    buffer += "\\tools\\qpakman -extract ";
+    buffer += wad_canonical;
+    system(buffer.c_str());
+
+    std::filesystem::current_path(path);
+  }
+
   // get all the files, load all the png.
   uint32_t i = 0;
   auto files = get_all_files_in_directory(directory);
   for (auto& file : files) {
     std::string image_name = file.u8string();
+    textures.push_back(image_name);
     image_name = image_name.substr(image_name.find_last_of("\\") + 1);
     image_name = image_name.substr(0, image_name.find_last_of("."));
+    // remove _fbr
+    auto sanitized_name = image_name;
+    replace(sanitized_name, "_fbr", "");
 
     loader_png_data_t* image = load_png(file.u8string().c_str(), allocator);
-    data[image_name] = image;
-    image_paths[image_name] = i++;
+    data[sanitized_name] = image;
+    image_paths[sanitized_name] = i;
+    index_to_path[i] = image_name + ".png";
+    ++i;
   }
 
-  return data;
+  return textures;
 }
 
 static
@@ -736,16 +775,12 @@ map_to_serializer_meshes(
   loader_map_data_t* map_data, 
   // serializer_mesh_data_t* result,
   std::unordered_map<std::string, uint32_t>& image_paths,
+  std::unordered_map<uint32_t, std::string>& index_to_path,
   std::unordered_map<std::string, loader_png_data_t*>& texture_data,
   const allocator_t* allocator)
 {
   mesh_t* cube = create_unit_cube(allocator);
   transform_cube(cube);
-
-  // copy the texture data, this is the reverse fo the image_paths.
-  std::unordered_map<uint32_t, std::string> index_to_path;
-  for (auto& entry : image_paths)
-    index_to_path[entry.second] = entry.first + ".png";
   
   // organize the face per index into the image_paths.
   std::unordered_map<uint32_t, std::vector<uint32_t>> index_to_faces;
@@ -957,29 +992,31 @@ map_to_serializer_meshes(
   free_mesh(cube, allocator);
 }
 
-serializer_scene_data_t*
+std::vector<std::string>
 map_to_bin(
   const char* scene_file,
   loader_map_data_t* map_data, 
+  serializer_scene_data_t* scene,
   const allocator_t* allocator)
 {
   std::unordered_map<std::string, uint32_t> image_paths;
-  std::unordered_map<std::string, loader_png_data_t*> texture_data = 
-  load_texture_data(scene_file, map_data->world.wad, image_paths, allocator);
-
-  serializer_scene_data_t* scene =
-    (serializer_scene_data_t*)allocator->mem_alloc(
-      sizeof(serializer_scene_data_t));
+  std::unordered_map<uint32_t, std::string> index_to_paths;
+  std::unordered_map<std::string, loader_png_data_t*> texture_data;
+  auto textures = load_texture_data(
+    scene_file, 
+    map_data->world.wad, 
+    texture_data, image_paths, index_to_paths, allocator);
 
   map_to_serializer_meshes(
     scene,
     scene_file, 
     map_data,
     image_paths, 
+    index_to_paths,
     texture_data, 
     allocator);
   
   free_texture_data(texture_data, allocator);
 
-  return scene;
+  return textures;
 }

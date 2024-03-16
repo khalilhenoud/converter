@@ -96,7 +96,9 @@ load_assimp(
     std::string name = get_simple_name(scene_file);
     std::string target_path = data_folder + name;
     ensure_clean_directory(target_path);
-    copy_files(target_path + "\\", textures);
+    std::string texture_target_path = target_path + "\\textures";
+    ensure_clean_directory(texture_target_path);
+    copy_files(texture_target_path + "\\", textures);
     
     // serialize the bin file.
     std::string target_bin = target_path + "\\" + name + ".bin";
@@ -112,21 +114,30 @@ load_map(
   const allocator_t& allocator)
 {
   loader_map_data_t* map = load_map(scene_file.c_str(), &allocator);
-  serializer_scene_data_t* scene_bin = map_to_bin(
-    scene_file.c_str(), map, &allocator);
-  free_map(map, &allocator);
+  printf("loading map file successful!");
 
-  std::vector<std::string> textures;
+  serializer_scene_data_t* scene_bin = 
+    (serializer_scene_data_t*)allocator.mem_alloc(
+      sizeof(serializer_scene_data_t));
+  memset(scene_bin, 0, sizeof(serializer_scene_data_t));
+
+  std::vector<std::string> textures = map_to_bin(
+    scene_file.c_str(), map, scene_bin, &allocator);
+  free_map(map, &allocator);
+  
   // get the trimmed file name, since I want to use it to create a folder.
   std::string name = get_simple_name(scene_file);
   std::string target_path = data_folder + name;
   ensure_clean_directory(target_path);
-  copy_files(target_path + "\\", textures);
+  std::string texture_target_path = target_path + "\\textures";
+  ensure_clean_directory(texture_target_path);
+  copy_files(texture_target_path + "\\", textures);
 
   // serialize the bin file.
   std::string target_bin = target_path + "\\" + name + ".bin";
   serialize_bin(target_bin.c_str(), scene_bin);
   free_bin(scene_bin, &allocator);
+  printf("done!");
 }
 
 int main(int argc, char *argv[])
