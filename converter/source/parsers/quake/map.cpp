@@ -8,10 +8,8 @@
  * @copyright Copyright (c) 2024
  * 
  */
-#include <vector>
 #include <list>
 #include <deque>
-#include <string>
 #include <unordered_map>
 #include <utility>
 #include <algorithm>
@@ -19,17 +17,17 @@
 #include <cmath>
 #include <cstring>
 #include <iostream>
-#include <converter/parsers/map.h>
+#include <library/allocator/allocator.h>
 #include <math/c/vector3f.h>
 #include <math/c/segment.h>
 #include <math/c/face.h>
-#include <library/allocator/allocator.h>
+#include <converter/utils.h>
+#include <converter/parsers/quake/map.h>
 #include <entity/c/mesh/mesh.h>
 #include <entity/c/mesh/mesh_utils.h>
 #include <loaders/loader_map_data.h>
 #include <loaders/loader_png.h>
 #include <serializer/serializer_scene_data.h>
-#include <converter/utils.h>
 
 
 typedef
@@ -399,7 +397,7 @@ create_connecting_faces(
   edges.erase(iter++);
   point3f* back = &poly.points.back();
 
-  // Closest distance and early out when closed makes more sense.
+  // Closest distance and early out when closed, is more robust.
   float min_distance;
   uint32_t min_distance_i;
   bool closed = false;
@@ -484,7 +482,13 @@ create_connecting_faces(
   return triangulate_polygon(poly, normal);
 }
 
-bool replace(std::string& str, const std::string& from, const std::string& to) {
+static
+bool
+replace(
+  std::string& str, 
+  const std::string& from, 
+  const std::string& to) 
+{
   size_t start_pos = str.find(from);
   if (start_pos == std::string::npos)
     return false;
@@ -492,18 +496,18 @@ bool replace(std::string& str, const std::string& from, const std::string& to) {
   return true;
 }
 
+// NOTE: qpakman replaces some wad file tokens with an OS safe replacement.
 static
 std::string
-get_sanitized_texture_name(std::string face_texture)
+get_sanitized_texture_name(std::string str)
 {
-  std::string copy = face_texture;
-  std::transform(copy.begin(), copy.end(), copy.begin(), 
+  std::transform(str.begin(), str.end(), str.begin(), 
     [](unsigned char c) { return std::tolower(c); });
-  replace(copy, "*", "star_");
-  replace(copy, "+", "plus_");
-  replace(copy, "-", "minu_");
-  replace(copy, "/", "divd_");
-  return copy;
+  replace(str, "*", "star_");
+  replace(str, "+", "plus_");
+  replace(str, "-", "minu_");
+  replace(str, "/", "divd_");
+  return str;
 }
 
 std::vector<l_face_t>
@@ -512,24 +516,26 @@ brush_to_faces(
   const loader_map_brush_data_t* brush)
 {
   std::vector<b_plane_t> planes;
+
   // convert the brush planes to an easier format to work with.
   for (uint32_t i = 0; i < brush->face_count; ++i) {
     int32_t* data = brush->faces[i].data;
     point3f p1 = { (float)data[0], (float)data[1], (float)data[2] };
     point3f p2 = { (float)data[3], (float)data[4], (float)data[5] };
     point3f p3 = { (float)data[6], (float)data[7], (float)data[8] };
-    // flip the 3rd and 2nd point to adhere to the way the quake format works
+    // flip the 3rd and 2nd point to adhere to the way the quake format works.
     face_t face = { p1, p3, p2 };
     vector3f normal;
     get_faces_normals(&face, 1, &normal);
+    // read the texture data associated with the plane.
     b_texture_data_t texture_data = 
       {
         { brush->faces[i].offset[0], brush->faces[i].offset[1] }, 
         brush->faces[i].rotation, 
         { brush->faces[i].scale[0], brush->faces[i].scale[1] } 
       };
-    std::string sanitized = get_sanitized_texture_name(brush->faces[i].texture);
-    planes.push_back({ face, normal, sanitized, texture_data });
+    auto texture_name = get_sanitized_texture_name(brush->faces[i].texture);
+    planes.push_back({ face, normal, texture_name, texture_data });
   }
 
   // cut the faces by the planes, keep only the parts of the faces that makes
@@ -622,7 +628,7 @@ brush_to_faces(
               float t = 0.f;
               segment_plane_classification_t result = classify_segment_face(
                 &plane.face, &plane.normal, &segment, &intersection, &t);
-              // TODO: change conditions, t could be 1.00000002
+              // TODO: log instead of assert, t could be 1.00000002
               //assert(result == SEGMENT_PLANE_INTERSECT_ON_SEGMENT);
 
               if (pt_classify[idx0] == POINT_IN_POSITIVE_HALFSPACE)
@@ -680,11 +686,6 @@ brush_to_faces(
       }
     }
 
-    // we choose 2 because we assume the last 2 vertices auto connect, subject
-    // to change.
-    // TODO: replace this with a warning
-    //assert(edges.size() == 0 || edges.size() >= 2);
-
     // if the edges are valid, create a polygon to fill the gap and add it to
     // cut_faces.
     auto connecting = create_connecting_faces(cut_faces, edges, plane);
@@ -710,17 +711,18 @@ free_texture_data(
 }
 
 static
-std::vector<std::string>
+texture_vec_t
 load_texture_data(
   const char* scene_file, 
   std::string texture_directory, 
   std::unordered_map<std::string, loader_png_data_t*>& data,
-  std::unordered_map<std::string, uint32_t>& image_paths,
-  std::unordered_map<uint32_t, std::string>& index_to_path,
+  std::unordered_map<std::string, std::string>& sanitized_to_path,
   const allocator_t* allocator)
 {
-  std::vector<std::string> textures;
+  extern std::string tools_folder;
+  texture_vec_t textures;
 
+  // this will produce the wad extraction directory.
   std::string directory = scene_file;
   auto iter = directory.find_last_of("\\/");
   directory = directory.substr(0, iter + 1);
@@ -728,40 +730,42 @@ load_texture_data(
   directory += texture_directory;
 
   {
-    // canonical wad file path.
+    // get the canonical wad file path.
     std::string wadfile = directory;
     wadfile += ".wad";
     auto wad_canonical = std::filesystem::canonical(wadfile).string();
 
+    // ensure the extraction directory is created and clean. Set it as the 
+    // current path so we can extract into it.
     ensure_clean_directory(directory);
-    auto path = std::filesystem::current_path();
+    auto previous_path = std::filesystem::current_path();
     std::filesystem::current_path(directory);
 
-    std::string buffer = path.string();
-    buffer += "\\tools\\qpakman -extract ";
+    // extract the wad into the directory.
+    std::string buffer = tools_folder;
+    buffer += "qpakman -extract ";
     buffer += wad_canonical;
     system(buffer.c_str());
 
-    std::filesystem::current_path(path);
+    // restore our working directory.
+    std::filesystem::current_path(previous_path);
   }
 
   // get all the files, load all the png.
-  uint32_t i = 0;
   auto files = get_all_files_in_directory(directory);
   for (auto& file : files) {
-    std::string image_name = file.u8string();
-    textures.push_back(image_name);
-    image_name = image_name.substr(image_name.find_last_of("\\") + 1);
-    image_name = image_name.substr(0, image_name.find_last_of("."));
+    std::string name = file.u8string();
+    textures.push_back(name);
+    // get the simple texture name (no extention, no path).
+    name = name.substr(name.find_last_of("\\") + 1);
+    name = name.substr(0, name.find_last_of("."));
     // remove _fbr
-    auto sanitized_name = image_name;
+    auto sanitized_name = name;
     replace(sanitized_name, "_fbr", "");
 
     loader_png_data_t* image = load_png(file.u8string().c_str(), allocator);
     data[sanitized_name] = image;
-    image_paths[sanitized_name] = i;
-    index_to_path[i] = image_name + ".png";
-    ++i;
+    sanitized_to_path[sanitized_name] = name + ".png";
   }
 
   return textures;
@@ -769,21 +773,222 @@ load_texture_data(
 
 static
 void
+populate_scene(
+  serializer_scene_data_t* scene,
+  loader_map_data_t* map_data,
+  std::unordered_map<uint32_t, std::vector<uint32_t>>& index_to_faces,
+  std::vector<l_face_t>& map_faces,
+  std::unordered_map<std::string, uint32_t>& image_paths,
+  std::unordered_map<uint32_t, std::string>& index_to_path,
+  const allocator_t* allocator)
+{
+  {
+    // setup the scene.
+    scene->texture_repo.used = index_to_path.size();
+    scene->texture_repo.data = 
+      (serializer_texture_data_t*)allocator->mem_cont_alloc(
+        scene->texture_repo.used, sizeof(serializer_texture_data_t));
+
+    // one material per texture.
+    scene->material_repo.used = scene->texture_repo.used;
+    scene->material_repo.data = 
+      (serializer_material_data_t*)allocator->mem_cont_alloc(
+        scene->material_repo.used, sizeof(serializer_material_data_t));
+
+    for (uint32_t i = 0, count = index_to_path.size(); i < count; ++i) {
+      memset(
+        scene->texture_repo.data[i].path.data, 
+        0, 
+        sizeof(scene->texture_repo.data[i].path.data));
+      memcpy(
+        scene->texture_repo.data[i].path.data, 
+        index_to_path[i].c_str(),
+        index_to_path[i].size());
+
+      {
+        scene->material_repo.data[i].opacity = 1.f;
+        scene->material_repo.data[i].shininess = 1.f;
+        scene->material_repo.data[i].ambient.data[0] =
+        scene->material_repo.data[i].ambient.data[1] =
+        scene->material_repo.data[i].ambient.data[2] = 0.5f;
+        scene->material_repo.data[i].ambient.data[3] = 1.f;
+        scene->material_repo.data[i].diffuse.data[0] =
+        scene->material_repo.data[i].diffuse.data[1] =
+        scene->material_repo.data[i].diffuse.data[2] = 0.6f;
+        scene->material_repo.data[i].diffuse.data[3] = 1.f;
+        scene->material_repo.data[i].specular.data[0] =
+        scene->material_repo.data[i].specular.data[1] =
+        scene->material_repo.data[i].specular.data[2] = 0.6f;
+        scene->material_repo.data[i].specular.data[3] = 1.f;
+        
+        scene->material_repo.data[i].textures.used = 1;
+        memset(
+          scene->material_repo.data[i].textures.data, 
+          0, 
+          sizeof(scene->material_repo.data[i].textures.data));
+        scene->material_repo.data[i].textures.data->index = i;
+      }
+    }
+  }
+
+  {
+    // create as many mesh as there are materials.
+    scene->mesh_repo.used = scene->material_repo.used;
+    scene->mesh_repo.data = 
+      (serializer_mesh_data_t*)allocator->mem_cont_alloc(
+        scene->mesh_repo.used,
+        sizeof(serializer_mesh_data_t));
+    
+    for (uint32_t i = 0; i < scene->material_repo.used; ++i) {
+      serializer_mesh_data_t* mesh = scene->mesh_repo.data + i;
+      memset(mesh, 0, sizeof(serializer_mesh_data_t));
+
+      // get the faces that share this index texture-material.
+      auto& face_indices = index_to_faces[i];
+      uint32_t face_count = face_indices.size();
+      uint32_t vertices_count = face_count * 3;
+      uint32_t sizef3 = sizeof(float) * 3;
+      
+      mesh->vertices_count = vertices_count;
+      mesh->vertices = (float*)allocator->mem_alloc(sizef3 * vertices_count);
+      mesh->normals = (float*)allocator->mem_alloc(sizef3 * vertices_count);
+      mesh->uvs = (float*)allocator->mem_alloc(sizef3 * vertices_count);
+      memset(mesh->uvs, 0, sizef3 * vertices_count);
+
+      mesh->faces_count = face_count;
+      mesh->indices = (uint32_t*)allocator->mem_alloc(
+        sizeof(uint32_t) * vertices_count);
+      mesh->materials.used = 1;
+      mesh->materials.indices[0] = i;
+
+      // copy the data into the mesh.
+      uint32_t verti = 0, indexi = 0;
+      for (uint32_t k = 0; k < face_count; ++k) {
+        auto& face = map_faces[face_indices[k]];
+        point3f* points = face.face.points;
+        memcpy(mesh->vertices + (verti + 0) * 3, points[0].data, sizef3);
+        memcpy(mesh->vertices + (verti + 1) * 3, points[1].data, sizef3);
+        memcpy(mesh->vertices + (verti + 2) * 3, points[2].data, sizef3);
+        memcpy(mesh->normals + (verti + 0) * 3, face.normal.data, sizef3);
+        memcpy(mesh->normals + (verti + 1) * 3, face.normal.data, sizef3);
+        memcpy(mesh->normals + (verti + 2) * 3, face.normal.data, sizef3);
+        memcpy(mesh->uvs + (verti + 0) * 3, face.uv[0].data, sizef3);
+        memcpy(mesh->uvs + (verti + 1) * 3, face.uv[1].data, sizef3);
+        memcpy(mesh->uvs + (verti + 2) * 3, face.uv[2].data, sizef3);
+
+        mesh->indices[indexi + 0] = verti + 0;
+        mesh->indices[indexi + 1] = verti + 1;
+        mesh->indices[indexi + 2] = verti + 2;
+
+        indexi += 3;
+        verti += 3;
+      }
+    }
+  }
+
+  {
+    // 1 model with multiple meshes (unnamed for now).
+    scene->model_repo.used = 1;
+    scene->model_repo.data = 
+      (serializer_model_data_t*)allocator->mem_alloc(
+        sizeof(serializer_model_data_t));
+    memset(scene->model_repo.data, 0, sizeof(serializer_model_data_t));
+    scene->model_repo.data[0].meshes.used = scene->mesh_repo.used;
+    for (uint32_t i = 0; i < scene->mesh_repo.used; ++i)
+      scene->model_repo.data[0].meshes.indices[i] = i;
+    scene->model_repo.data[0].models.used = 0;
+    matrix4f_rotation_x(&scene->model_repo.data[0].transform, -K_PI/2.f);
+  }
+
+  {
+    // set the camera
+    scene->camera_repo.used = 1;
+    scene->camera_repo.data = 
+      (serializer_camera_t*)allocator->mem_alloc(
+        sizeof(serializer_camera_t));
+    scene->camera_repo.data[0].position.data[0] = 
+      (float)map_data->player_start[0];
+    scene->camera_repo.data[0].position.data[1] = 
+      (float)map_data->player_start[1];
+    scene->camera_repo.data[0].position.data[2] = 
+      (float)map_data->player_start[2];
+
+    // transform the camera to y being up.
+    mult_set_m4f_p3f(
+      &scene->model_repo.data[0].transform, 
+      &scene->camera_repo.data[0].position);
+    scene->camera_repo.data[0].lookat_direction.data[0] = 
+    scene->camera_repo.data[0].lookat_direction.data[1] = 0.f;
+    scene->camera_repo.data[0].lookat_direction.data[2] = -1.f;
+    scene->camera_repo.data[0].up_vector.data[0] = 
+    scene->camera_repo.data[0].up_vector.data[2] = 0.f;
+    scene->camera_repo.data[0].up_vector.data[1] = 1.f;
+  }
+
+  {
+    scene->light_repo.used = map_data->lights.count;
+    scene->light_repo.data = 
+      (serializer_light_data_t*)allocator->mem_cont_alloc(
+        scene->light_repo.used,
+        sizeof(serializer_light_data_t));
+
+    {
+      for (uint32_t i = 0; i < scene->light_repo.used; ++i) {
+        loader_map_light_data_t* m_light = map_data->lights.lights + i;
+        serializer_light_data_t* s_light = scene->light_repo.data + i;
+
+        memset(s_light, 0, sizeof(serializer_light_data_t));
+        s_light->type = SERIALIZER_LIGHT_TYPE_POINT;
+        s_light->position.data[0] = (float)m_light->origin[0];
+        s_light->position.data[1] = (float)m_light->origin[1];
+        s_light->position.data[2] = (float)m_light->origin[2];
+        mult_set_m4f_p3f(
+          &scene->model_repo.data[0].transform, 
+          &s_light->position);
+        s_light->attenuation_constant = 1.f;
+        s_light->attenuation_linear = 0.01f;
+        s_light->attenuation_quadratic = 0.f;
+        s_light->ambient.data[0] =
+        s_light->ambient.data[1] =
+        s_light->ambient.data[2] = 0.2f;
+        s_light->ambient.data[3] = 1.f;
+        s_light->diffuse.data[0] =
+        s_light->diffuse.data[1] =
+        s_light->diffuse.data[2] = (float)(m_light->light)/255.f;
+        s_light->diffuse.data[3] = 1.f;
+        s_light->specular.data[0] =
+        s_light->specular.data[1] =
+        s_light->specular.data[2] = 0.f;
+        s_light->specular.data[3] = 1.f;
+      }
+    }
+  }
+}
+
+static
+void
 map_to_serializer_meshes(
   serializer_scene_data_t* scene,
   const char* scene_file,
-  loader_map_data_t* map_data, 
-  // serializer_mesh_data_t* result,
-  std::unordered_map<std::string, uint32_t>& image_paths,
-  std::unordered_map<uint32_t, std::string>& index_to_path,
+  loader_map_data_t* map_data,
   std::unordered_map<std::string, loader_png_data_t*>& texture_data,
+  std::unordered_map<std::string, std::string>& sanitized_to_path,
   const allocator_t* allocator)
 {
+  // convert sanitized_to_path to both image_paths and index_to_path.
+  std::unordered_map<std::string, uint32_t> image_paths;
+  std::unordered_map<uint32_t, std::string> index_to_path;
+  {
+    uint32_t index = 0;
+    for (auto& entry : sanitized_to_path) {
+      image_paths[entry.first] = index;
+      index_to_path[index] = entry.second;
+      ++index;
+    }
+  }
+
   mesh_t* cube = create_unit_cube(allocator);
   transform_cube(cube);
-  
-  // organize the face per index into the image_paths.
-  std::unordered_map<uint32_t, std::vector<uint32_t>> index_to_faces;
 
   // convert the cube to a more manageable format.
   std::vector<l_face_t> faces;
@@ -798,8 +1003,14 @@ map_to_serializer_meshes(
     faces.push_back({ {p1, p2, p3}, normal});
   }
 
+  free_mesh(cube, allocator);
+
+  // organize the face per index into the image_paths.
+  std::unordered_map<uint32_t, std::vector<uint32_t>> index_to_faces;
+  std::vector<l_face_t> map_faces;
+
   {
-    std::vector<l_face_t> map_faces;
+    // process the data.
     for (uint32_t i = 0; i < map_data->world.brush_count; ++i) {
       auto cut_faces = brush_to_faces(faces, map_data->world.brushes + i);
       map_faces.insert(map_faces.end(), cut_faces.begin(), cut_faces.end());
@@ -822,198 +1033,40 @@ map_to_serializer_meshes(
 
       index_to_faces[image_paths[face.texture]].push_back(i);
     }
-
-    {
-      // setup the scene.
-      scene->texture_repo.used = index_to_path.size();
-      scene->texture_repo.data = 
-        (serializer_texture_data_t*)allocator->mem_cont_alloc(
-          scene->texture_repo.used, sizeof(serializer_texture_data_t));
-
-      // one material per texture.
-      scene->material_repo.used = scene->texture_repo.used;
-      scene->material_repo.data = 
-        (serializer_material_data_t*)allocator->mem_cont_alloc(
-          scene->material_repo.used, sizeof(serializer_material_data_t));
-
-      for (uint32_t i = 0, count = index_to_path.size(); i < count; ++i) {
-        memset(
-          scene->texture_repo.data[i].path.data, 
-          0, 
-          sizeof(scene->texture_repo.data[i].path.data));
-        memcpy(
-          scene->texture_repo.data[i].path.data, 
-          index_to_path[i].c_str(),
-          index_to_path[i].size());
-
-        {
-          scene->material_repo.data[i].opacity = 1.f;
-          scene->material_repo.data[i].shininess = 1.f;
-          scene->material_repo.data[i].ambient.data[0] =
-          scene->material_repo.data[i].ambient.data[1] =
-          scene->material_repo.data[i].ambient.data[2] = 0.5f;
-          scene->material_repo.data[i].ambient.data[3] = 1.f;
-          scene->material_repo.data[i].diffuse.data[0] =
-          scene->material_repo.data[i].diffuse.data[1] =
-          scene->material_repo.data[i].diffuse.data[2] = 0.6f;
-          scene->material_repo.data[i].diffuse.data[3] = 1.f;
-          scene->material_repo.data[i].specular.data[0] =
-          scene->material_repo.data[i].specular.data[1] =
-          scene->material_repo.data[i].specular.data[2] = 0.6f;
-          scene->material_repo.data[i].specular.data[3] = 1.f;
-         
-          scene->material_repo.data[i].textures.used = 1;
-          memset(
-            scene->material_repo.data[i].textures.data, 
-            0, 
-            sizeof(scene->material_repo.data[i].textures.data));
-          scene->material_repo.data[i].textures.data->index = i;
-        }
-      }
-    }
-
-    {
-      // create as many mesh as there are materials.
-      scene->mesh_repo.used = scene->material_repo.used;
-      scene->mesh_repo.data = 
-        (serializer_mesh_data_t*)allocator->mem_cont_alloc(
-          scene->mesh_repo.used,
-          sizeof(serializer_mesh_data_t));
-      
-      for (uint32_t i = 0; i < scene->material_repo.used; ++i) {
-        serializer_mesh_data_t* mesh = scene->mesh_repo.data + i;
-        memset(mesh, 0, sizeof(serializer_mesh_data_t));
-
-        // get the faces that share this index texture-material.
-        auto& face_indices = index_to_faces[i];
-        uint32_t face_count = face_indices.size();
-        uint32_t vertices_count = face_count * 3;
-        uint32_t sizef3 = sizeof(float) * 3;
-       
-        mesh->vertices_count = vertices_count;
-        mesh->vertices = (float*)allocator->mem_alloc(sizef3 * vertices_count);
-        mesh->normals = (float*)allocator->mem_alloc(sizef3 * vertices_count);
-        mesh->uvs = (float*)allocator->mem_alloc(sizef3 * vertices_count);
-        memset(mesh->uvs, 0, sizef3 * vertices_count);
-
-        mesh->faces_count = face_count;
-        mesh->indices = (uint32_t*)allocator->mem_alloc(
-          sizeof(uint32_t) * vertices_count);
-        mesh->materials.used = 1;
-        mesh->materials.indices[0] = i;
-
-        // copy the data into the mesh.
-        uint32_t verti = 0, indexi = 0;
-        for (uint32_t k = 0; k < face_count; ++k) {
-          auto& face = map_faces[face_indices[k]];
-          point3f* points = face.face.points;
-          memcpy(mesh->vertices + (verti + 0) * 3, points[0].data, sizef3);
-          memcpy(mesh->vertices + (verti + 1) * 3, points[1].data, sizef3);
-          memcpy(mesh->vertices + (verti + 2) * 3, points[2].data, sizef3);
-          memcpy(mesh->normals + (verti + 0) * 3, face.normal.data, sizef3);
-          memcpy(mesh->normals + (verti + 1) * 3, face.normal.data, sizef3);
-          memcpy(mesh->normals + (verti + 2) * 3, face.normal.data, sizef3);
-          memcpy(mesh->uvs + (verti + 0) * 3, face.uv[0].data, sizef3);
-          memcpy(mesh->uvs + (verti + 1) * 3, face.uv[1].data, sizef3);
-          memcpy(mesh->uvs + (verti + 2) * 3, face.uv[2].data, sizef3);
-
-          mesh->indices[indexi + 0] = verti + 0;
-          mesh->indices[indexi + 1] = verti + 1;
-          mesh->indices[indexi + 2] = verti + 2;
-
-          indexi += 3;
-          verti += 3;
-        }
-      }
-    }
-
-    {
-      // 1 model with multiple meshes (unnamed for now).
-      scene->model_repo.used = 1;
-      scene->model_repo.data = 
-        (serializer_model_data_t*)allocator->mem_alloc(
-          sizeof(serializer_model_data_t));
-      memset(scene->model_repo.data, 0, sizeof(serializer_model_data_t));
-      scene->model_repo.data[0].meshes.used = scene->mesh_repo.used;
-      for (uint32_t i = 0; i < scene->mesh_repo.used; ++i)
-        scene->model_repo.data[0].meshes.indices[i] = i;
-      scene->model_repo.data[0].models.used = 0;
-      matrix4f_rotation_x(&scene->model_repo.data[0].transform, -K_PI/2.f);
-    }
-
-    {
-      // set the camera
-      scene->camera_repo.used = 1;
-      scene->camera_repo.data = 
-        (serializer_camera_t*)allocator->mem_alloc(
-          sizeof(serializer_camera_t));
-      scene->camera_repo.data[0].position.data[0] = 
-        (float)map_data->player_start[0];
-      scene->camera_repo.data[0].position.data[1] = 
-        (float)map_data->player_start[1];
-      scene->camera_repo.data[0].position.data[2] = 
-        (float)map_data->player_start[2];
-
-      // transform the camera to y being up.
-      mult_set_m4f_p3f(
-        &scene->model_repo.data[0].transform, 
-        &scene->camera_repo.data[0].position);
-      scene->camera_repo.data[0].lookat_direction.data[0] = 
-      scene->camera_repo.data[0].lookat_direction.data[1] = 0.f;
-      scene->camera_repo.data[0].lookat_direction.data[2] = -1.f;
-      scene->camera_repo.data[0].up_vector.data[0] = 
-      scene->camera_repo.data[0].up_vector.data[2] = 0.f;
-      scene->camera_repo.data[0].up_vector.data[1] = 1.f;
-    }
-
-    {
-      // TODO: Support all lights
-      scene->light_repo.used = 1;
-      scene->light_repo.data = 
-        (serializer_light_data_t*)allocator->mem_alloc(
-          sizeof(serializer_light_data_t));
-      memset(scene->light_repo.data, 0, sizeof(serializer_light_data_t));
-      scene->light_repo.data->type = SERIALIZER_LIGHT_TYPE_POINT;
-      scene->light_repo.data->ambient.data[0] =
-      scene->light_repo.data->ambient.data[1] =
-      scene->light_repo.data->ambient.data[2] = 0.1f;
-      scene->light_repo.data->ambient.data[3] = 1.f;
-      scene->light_repo.data->diffuse.data[0] =
-      scene->light_repo.data->diffuse.data[1] =
-      scene->light_repo.data->diffuse.data[2] = 0.2f;
-      scene->light_repo.data->diffuse.data[3] = 1.f;
-      scene->light_repo.data->specular.data[0] =
-      scene->light_repo.data->specular.data[1] =
-      scene->light_repo.data->specular.data[2] = 0.f;
-      scene->light_repo.data->specular.data[3] = 1.f;
-    }
   }
 
-  free_mesh(cube, allocator);
+  populate_scene(
+    scene, 
+    map_data, 
+    index_to_faces, 
+    map_faces, 
+    image_paths, 
+    index_to_path, 
+    allocator);
 }
 
-std::vector<std::string>
+texture_vec_t
 map_to_bin(
   const char* scene_file,
   loader_map_data_t* map_data, 
   serializer_scene_data_t* scene,
   const allocator_t* allocator)
 {
-  std::unordered_map<std::string, uint32_t> image_paths;
-  std::unordered_map<uint32_t, std::string> index_to_paths;
+  std::unordered_map<std::string, std::string> sanitized_to_path;
   std::unordered_map<std::string, loader_png_data_t*> texture_data;
-  auto textures = load_texture_data(
+  texture_vec_t textures = load_texture_data(
     scene_file, 
     map_data->world.wad, 
-    texture_data, image_paths, index_to_paths, allocator);
+    texture_data, 
+    sanitized_to_path, 
+    allocator);
 
   map_to_serializer_meshes(
     scene,
     scene_file, 
     map_data,
-    image_paths, 
-    index_to_paths,
-    texture_data, 
+    texture_data,
+    sanitized_to_path, 
     allocator);
   
   free_texture_data(texture_data, allocator);

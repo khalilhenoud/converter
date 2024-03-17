@@ -13,13 +13,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # add the executable
 add_executable(${PROJECT_NAME} 
 				./source/main.cpp
-        ./source/parsers/map.cpp
-        ./source/parsers/nodes.cpp
-        ./source/parsers/meshes.cpp
-        ./source/parsers/materials.cpp
-        ./source/parsers/textures.cpp
-        ./source/parsers/lights.cpp
-        ./source/parsers/cameras.cpp
+        ./source/parsers/quake/loader.cpp
+        ./source/parsers/quake/map.cpp
+        ./source/parsers/assimp/loader.cpp
+        ./source/parsers/assimp/nodes.cpp
+        ./source/parsers/assimp/meshes.cpp
+        ./source/parsers/assimp/materials.cpp
+        ./source/parsers/assimp/textures.cpp
+        ./source/parsers/assimp/lights.cpp
+        ./source/parsers/assimp/cameras.cpp
 				)
 			
 target_link_libraries(${PROJECT_NAME}

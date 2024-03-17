@@ -8,13 +8,13 @@
  * @copyright Copyright (c) 2023
  * 
  */
-#include <library/allocator/allocator.h>
-#include <converter/utils.h>
 #include <assimp/scene.h>
-#include <converter/parsers/textures.h>
 #include <assimp/types.h>
 #include <assimp/material.h>
+#include <library/allocator/allocator.h>
 #include <library/string/fixed_string.h>
+#include <converter/utils.h>
+#include <converter/parsers/assimp/textures.h>
 #include <serializer/serializer_scene_data.h>
 
 

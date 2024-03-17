@@ -10,12 +10,12 @@
  */
 #include <cassert>
 #include <functional>
-#include <library/allocator/allocator.h>
-#include <converter/utils.h>
 #include <assimp/scene.h>
-#include <converter/parsers/lights.h>
 #include <assimp/types.h>
 #include <library/string/fixed_string.h>
+#include <library/allocator/allocator.h>
+#include <converter/utils.h>
+#include <converter/parsers/assimp/lights.h>
 #include <serializer/serializer_scene_data.h>
 
 

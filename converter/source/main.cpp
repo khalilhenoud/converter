@@ -14,25 +14,17 @@
 #include <algorithm>
 #include <functional>
 #include <filesystem>
+#include <cassert>
 #include <library/allocator/allocator.h>
-#include <serializer/serializer_bin.h>
 #include <converter/utils.h>
-#include <converter/parsers/nodes.h>
-#include <converter/parsers/meshes.h>
-#include <converter/parsers/materials.h>
-#include <converter/parsers/textures.h>
-#include <converter/parsers/lights.h>
-#include <converter/parsers/cameras.h>
-#include <converter/parsers/map.h>
-#include <loaders/loader_map.h>
+#include <converter/parsers/assimp/loader.h>
+#include <converter/parsers/quake/loader.h>
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
 
+std::string data_folder = "";
+std::string tools_folder = "";
 
 std::vector<uintptr_t> allocated;
-std::string data_folder = "..\\data\\rooms\\";
 
 void* allocate(size_t size)
 {
@@ -59,87 +51,6 @@ void free_block(void* block)
   free(block);
 }
 
-static
-void
-load_assimp(
-  std::string scene_file, 
-  const allocator_t& allocator)
-{
-  Assimp::Importer Importer;
-  const aiScene* pScene = Importer.ReadFile(
-    scene_file, 
-    aiProcess_Triangulate | 
-    aiProcess_GenSmoothNormals | 
-    aiProcess_FlipUVs | 
-    aiProcess_JoinIdenticalVertices);
-
-  if (!pScene)
-    printf(
-      "Error parsing '%s': '%s'\n", scene_file.c_str(), 
-      Importer.GetErrorString());
-  else {
-    printf("Parsing was successful");
-
-    serializer_scene_data_t* scene_bin = 
-      (serializer_scene_data_t*)allocator.mem_alloc(
-        sizeof(serializer_scene_data_t));
-
-    auto textures = 
-    populate_materials(scene_bin, pScene, &allocator);
-    populate_textures(scene_bin, &allocator, textures);
-    populate_lights(scene_bin, pScene, &allocator);
-    populate_meshes(scene_bin, pScene, &allocator);
-    populate_nodes(scene_bin, pScene, &allocator);
-    populate_cameras(scene_bin, pScene, &allocator);
-
-    // get the trimmed file name, since I want to use it to create a folder.
-    std::string name = get_simple_name(scene_file);
-    std::string target_path = data_folder + name;
-    ensure_clean_directory(target_path);
-    std::string texture_target_path = target_path + "\\textures";
-    ensure_clean_directory(texture_target_path);
-    copy_files(texture_target_path + "\\", textures);
-    
-    // serialize the bin file.
-    std::string target_bin = target_path + "\\" + name + ".bin";
-    serialize_bin(target_bin.c_str(), scene_bin);
-    free_bin(scene_bin, &allocator);
-  }
-}
-
-static
-void
-load_map(
-  std::string scene_file, 
-  const allocator_t& allocator)
-{
-  loader_map_data_t* map = load_map(scene_file.c_str(), &allocator);
-  printf("loading map file successful!");
-
-  serializer_scene_data_t* scene_bin = 
-    (serializer_scene_data_t*)allocator.mem_alloc(
-      sizeof(serializer_scene_data_t));
-  memset(scene_bin, 0, sizeof(serializer_scene_data_t));
-
-  std::vector<std::string> textures = map_to_bin(
-    scene_file.c_str(), map, scene_bin, &allocator);
-  free_map(map, &allocator);
-  
-  // get the trimmed file name, since I want to use it to create a folder.
-  std::string name = get_simple_name(scene_file);
-  std::string target_path = data_folder + name;
-  ensure_clean_directory(target_path);
-  std::string texture_target_path = target_path + "\\textures";
-  ensure_clean_directory(texture_target_path);
-  copy_files(texture_target_path + "\\", textures);
-
-  // serialize the bin file.
-  std::string target_bin = target_path + "\\" + name + ".bin";
-  serialize_bin(target_bin.c_str(), scene_bin);
-  free_bin(scene_bin, &allocator);
-  printf("done!");
-}
-
 int main(int argc, char *argv[])
 {
   allocator_t allocator;
@@ -149,13 +60,15 @@ int main(int argc, char *argv[])
   allocator.mem_alloc_alligned = nullptr;
   allocator.mem_realloc = nullptr;
 
-  assert(argc >= 2 && "provide path to mesh file!");
-  const char* scene_file = argv[1];
+  assert(argc >= 4 && "provide path to mesh file!");
+  data_folder = argv[1];
+  tools_folder = argv[2];
+  const char* scene_file = argv[3];
 
   if (get_extension(scene_file) == "map")
-    load_map(scene_file, allocator);
+    load_qmap(scene_file, &allocator);
   else
-    load_assimp(scene_file, allocator);
+    load_assimp(scene_file, &allocator);
   
   assert(allocated.size() == 0);
   return 0;
