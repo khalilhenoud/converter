@@ -79,7 +79,7 @@ transform_cube(mesh_t* cube)
 
 inline
 bool
-identical_points(point3f& p1, point3f& p2, float epsilon = 1.f)
+identical_points(point3f& p1, point3f& p2, float epsilon = 1.f/16.f)
 {
   vector3f diff = diff_v3f(&p1, &p2);
   return length_v3f(&diff) < epsilon;
