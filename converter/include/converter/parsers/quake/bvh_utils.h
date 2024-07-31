@@ -8,8 +8,8 @@
  * @copyright Copyright (c) 2023
  * 
  */
-#ifndef BVH_UTILS_H
-#define BVH_UTILS_H
+#ifndef CONVERTER_BVH_UTILS_H
+#define CONVERTER_BVH_UTILS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,7 +21,7 @@ typedef struct serializer_scene_data_t serializer_scene_data_t;
 typedef struct allocator_t allocator_t;
 
 bvh_t* 
-create_bvh_from_scene(
+create_bvh_from_serializer_scene(
   serializer_scene_data_t* scene, 
   const allocator_t* allocator);
 

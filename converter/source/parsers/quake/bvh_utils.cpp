@@ -10,8 +10,8 @@
  */
 #include <assert.h>
 #include <library/allocator/allocator.h>
+#include <converter/parsers/quake/bvh_utils.h>
 #include <entity/c/spatial/bvh.h>
-#include <entity/c/spatial/bvh_utils.h>
 #include <serializer/serializer_scene_data.h>
 
 #define OPTIMIZE_UNSAFE 0
@@ -119,7 +119,7 @@ build_bvh_transformed_data(
 }
 
 bvh_t* 
-create_bvh_from_scene(
+create_bvh_from_serializer_scene(
   serializer_scene_data_t* scene, 
   const allocator_t* allocator)
 {

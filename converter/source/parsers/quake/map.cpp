@@ -974,7 +974,7 @@ populate_scene(
         scene->bvh_repo.used,
         sizeof(serializer_bvh_t));
 
-    bvh_t* bvh = create_bvh_from_scene(scene, allocator);
+    bvh_t* bvh = create_bvh_from_serializer_scene(scene, allocator);
     // the types are binary compatible.
     scene->bvh_repo.data[0].bounds = (serializer_aabb_t*)bvh->bounds;
     scene->bvh_repo.data[0].count = bvh->count;

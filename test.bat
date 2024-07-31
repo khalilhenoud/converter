@@ -1,0 +1,1 @@
+build\Debug\converter F:\data\rooms\ F:\converter\tools\ F:\data\raws\quake\e1m1.map
