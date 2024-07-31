@@ -23,6 +23,8 @@
 #include <math/c/face.h>
 #include <converter/utils.h>
 #include <converter/parsers/quake/map.h>
+#include <converter/parsers/quake/bvh_utils.h>
+#include <entity/c/spatial/bvh.h>
 #include <entity/c/mesh/mesh.h>
 #include <entity/c/mesh/mesh_utils.h>
 #include <loaders/loader_map_data.h>
@@ -962,6 +964,31 @@ populate_scene(
         s_light->specular.data[3] = 1.f;
       }
     }
+  }
+
+  {
+    // for now limit it to 1.
+    scene->bvh_repo.used = 1;
+    scene->bvh_repo.data = 
+      (serializer_bvh_t*)allocator->mem_cont_alloc(
+        scene->bvh_repo.used,
+        sizeof(serializer_bvh_t));
+
+    bvh_t* bvh = create_bvh_from_scene(scene, allocator);
+    // the types are binary compatible.
+    scene->bvh_repo.data[0].bounds = (serializer_aabb_t*)bvh->bounds;
+    scene->bvh_repo.data[0].count = bvh->count;
+    scene->bvh_repo.data[0].faces = bvh->faces;
+    scene->bvh_repo.data[0].normals = bvh->normals;
+    scene->bvh_repo.data[0].nodes = (serializer_bvh_node_t*)bvh->nodes;
+    scene->bvh_repo.data[0].nodes_used = bvh->nodes_used;
+
+    // the pointers have been moved
+    bvh->bounds = NULL;
+    bvh->faces = NULL;
+    bvh->normals = NULL;
+    bvh->nodes = NULL;
+    free_bvh(bvh, allocator);
   }
 }
 
