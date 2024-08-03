@@ -889,7 +889,7 @@ populate_scene(
   }
 
   {
-    // 1 model with multiple meshes (unnamed for now).
+    // 1 model with multiple meshes (unnamed for now), transform to fit our need
     scene->model_repo.used = 1;
     scene->model_repo.data = 
       (serializer_model_data_t*)allocator->mem_alloc(
@@ -909,11 +909,8 @@ populate_scene(
       (serializer_camera_t*)allocator->mem_alloc(
         sizeof(serializer_camera_t));
     scene->camera_repo.data[0].position.data[0] = 
-      (float)map_data->player_start[0];
     scene->camera_repo.data[0].position.data[1] = 
-      (float)map_data->player_start[1];
-    scene->camera_repo.data[0].position.data[2] = 
-      (float)map_data->player_start[2];
+    scene->camera_repo.data[0].position.data[2] = 0.f;
 
     // transform the camera to y being up.
     mult_set_m4f_p3f(
@@ -964,6 +961,19 @@ populate_scene(
         s_light->specular.data[3] = 1.f;
       }
     }
+  }
+
+  {
+    // set the metadata.
+    scene->metadata.player_start.data[0] = (float)map_data->player_start[0]; 
+    scene->metadata.player_start.data[1] = (float)map_data->player_start[1]; 
+    scene->metadata.player_start.data[2] = (float)map_data->player_start[2];
+    scene->metadata.player_angle = (float)map_data->player_angle;
+
+    // transform the start_position, is this required?
+    mult_set_m4f_p3f(
+      &scene->model_repo.data[0].transform, 
+      &scene->metadata.player_start);
   }
 
   {
