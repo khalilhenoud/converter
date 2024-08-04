@@ -25,6 +25,7 @@
 #include <converter/parsers/quake/map.h>
 #include <converter/parsers/quake/bvh_utils.h>
 #include <entity/c/spatial/bvh.h>
+#include <entity/c/spatial/bvh_utils.h>
 #include <entity/c/mesh/mesh.h>
 #include <entity/c/mesh/mesh_utils.h>
 #include <loaders/loader_map_data.h>

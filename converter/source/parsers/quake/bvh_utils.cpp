@@ -12,6 +12,7 @@
 #include <library/allocator/allocator.h>
 #include <converter/parsers/quake/bvh_utils.h>
 #include <entity/c/spatial/bvh.h>
+#include <entity/c/spatial/bvh_utils.h>
 #include <serializer/serializer_scene_data.h>
 
 #define OPTIMIZE_UNSAFE 0
