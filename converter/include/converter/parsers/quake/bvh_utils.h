@@ -17,12 +17,13 @@ extern "C" {
 
 
 typedef struct bvh_t bvh_t;
+typedef struct scene_t scene_t;
 typedef struct serializer_scene_data_t serializer_scene_data_t;
 typedef struct allocator_t allocator_t;
 
 bvh_t* 
-create_bvh_from_serializer_scene(
-  serializer_scene_data_t* scene, 
+create_bvh_from_scene(
+  scene_t* scene, 
   const allocator_t* allocator);
 
 #ifdef __cplusplus

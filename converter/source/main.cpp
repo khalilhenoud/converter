@@ -40,6 +40,22 @@ void* container_allocate(size_t count, size_t elem_size)
   return block;
 }
 
+void* reallocate(void* block, size_t size)
+{
+  void* tmp = realloc(block, size);
+  assert(tmp);
+
+  uintptr_t item = (uintptr_t)block;
+  auto iter = std::find(allocated.begin(), allocated.end(), item);
+  assert(iter != allocated.end());
+  allocated.erase(iter);
+
+  block = tmp;
+  allocated.push_back(uintptr_t(block));
+
+  return block;
+}
+
 void free_block(void* block)
 {
   allocated.erase(
@@ -58,7 +74,7 @@ int main(int argc, char *argv[])
   allocator.mem_cont_alloc = container_allocate;
   allocator.mem_free = free_block;
   allocator.mem_alloc_alligned = nullptr;
-  allocator.mem_realloc = nullptr;
+  allocator.mem_realloc = reallocate;
 
   assert(argc >= 4 && "provide path to mesh file!");
   data_folder = argv[1];

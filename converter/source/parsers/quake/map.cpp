@@ -18,6 +18,7 @@
 #include <cstring>
 #include <iostream>
 #include <library/allocator/allocator.h>
+#include <library/string/cstring.h>
 #include <math/c/vector3f.h>
 #include <math/c/segment.h>
 #include <math/c/face.h>
@@ -28,6 +29,19 @@
 #include <entity/c/spatial/bvh_utils.h>
 #include <entity/c/mesh/mesh.h>
 #include <entity/c/mesh/mesh_utils.h>
+#include <entity/c/mesh/color.h>
+#include <entity/c/mesh/texture.h>
+#include <entity/c/mesh/texture_utils.h>
+#include <entity/c/mesh/material.h>
+#include <entity/c/mesh/material_utils.h>
+#include <entity/c/scene/light.h>
+#include <entity/c/scene/light_utils.h>
+#include <entity/c/scene/camera.h>
+#include <entity/c/scene/camera_utils.h>
+#include <entity/c/scene/node.h>
+#include <entity/c/scene/node_utils.h>
+#include <entity/c/scene/scene.h>
+#include <entity/c/scene/scene_utils.h>
 #include <loaders/loader_map_data.h>
 #include <loaders/loader_png.h>
 #include <serializer/serializer_scene_data.h>
@@ -777,7 +791,7 @@ load_texture_data(
 static
 void
 populate_scene(
-  serializer_scene_data_t* scene,
+  scene_t *scene,
   loader_map_data_t* map_data,
   std::unordered_map<uint32_t, std::vector<uint32_t>>& index_to_faces,
   std::vector<l_face_t>& map_faces,
@@ -787,64 +801,61 @@ populate_scene(
 {
   {
     // setup the scene.
-    scene->texture_repo.used = index_to_path.size();
-    scene->texture_repo.data = 
-      (serializer_texture_data_t*)allocator->mem_cont_alloc(
-        scene->texture_repo.used, sizeof(serializer_texture_data_t));
+    scene->texture_repo.count = index_to_path.size();
+    scene->texture_repo.textures = 
+      (texture_t*)allocator->mem_cont_alloc(
+        scene->texture_repo.count, sizeof(texture_t));
 
     // one material per texture.
-    scene->material_repo.used = scene->texture_repo.used;
-    scene->material_repo.data = 
-      (serializer_material_data_t*)allocator->mem_cont_alloc(
-        scene->material_repo.used, sizeof(serializer_material_data_t));
+    scene->material_repo.count = scene->texture_repo.count;
+    scene->material_repo.materials = 
+      (material_t*)allocator->mem_cont_alloc(
+        scene->material_repo.count, sizeof(material_t));
 
     for (uint32_t i = 0, count = index_to_path.size(); i < count; ++i) {
-      memset(
-        scene->texture_repo.data[i].path.data, 
-        0, 
-        sizeof(scene->texture_repo.data[i].path.data));
-      memcpy(
-        scene->texture_repo.data[i].path.data, 
-        index_to_path[i].c_str(),
-        index_to_path[i].size());
+      scene->texture_repo.textures[i].path = cstring_create(
+        index_to_path[i].c_str(), allocator);
 
       {
-        scene->material_repo.data[i].opacity = 1.f;
-        scene->material_repo.data[i].shininess = 1.f;
-        scene->material_repo.data[i].ambient.data[0] =
-        scene->material_repo.data[i].ambient.data[1] =
-        scene->material_repo.data[i].ambient.data[2] = 0.5f;
-        scene->material_repo.data[i].ambient.data[3] = 1.f;
-        scene->material_repo.data[i].diffuse.data[0] =
-        scene->material_repo.data[i].diffuse.data[1] =
-        scene->material_repo.data[i].diffuse.data[2] = 0.6f;
-        scene->material_repo.data[i].diffuse.data[3] = 1.f;
-        scene->material_repo.data[i].specular.data[0] =
-        scene->material_repo.data[i].specular.data[1] =
-        scene->material_repo.data[i].specular.data[2] = 0.6f;
-        scene->material_repo.data[i].specular.data[3] = 1.f;
+        material_def(scene->material_repo.materials + i);
+        scene->material_repo.materials[i].name = cstring_create(
+          NULL, allocator);
+        scene->material_repo.materials[i].opacity = 1.f;
+        scene->material_repo.materials[i].shininess = 1.f;
+        scene->material_repo.materials[i].ambient.data[0] =
+        scene->material_repo.materials[i].ambient.data[1] =
+        scene->material_repo.materials[i].ambient.data[2] = 0.5f;
+        scene->material_repo.materials[i].ambient.data[3] = 1.f;
+        scene->material_repo.materials[i].diffuse.data[0] =
+        scene->material_repo.materials[i].diffuse.data[1] =
+        scene->material_repo.materials[i].diffuse.data[2] = 0.6f;
+        scene->material_repo.materials[i].diffuse.data[3] = 1.f;
+        scene->material_repo.materials[i].specular.data[0] =
+        scene->material_repo.materials[i].specular.data[1] =
+        scene->material_repo.materials[i].specular.data[2] = 0.6f;
+        scene->material_repo.materials[i].specular.data[3] = 1.f;
         
-        scene->material_repo.data[i].textures.used = 1;
+        scene->material_repo.materials[i].textures.used = 1;
         memset(
-          scene->material_repo.data[i].textures.data, 
+          scene->material_repo.materials[i].textures.data, 
           0, 
-          sizeof(scene->material_repo.data[i].textures.data));
-        scene->material_repo.data[i].textures.data->index = i;
+          sizeof(scene->material_repo.materials[i].textures.data));
+        scene->material_repo.materials[i].textures.data->index = i;
       }
     }
   }
 
   {
     // create as many mesh as there are materials.
-    scene->mesh_repo.used = scene->material_repo.used;
-    scene->mesh_repo.data = 
-      (serializer_mesh_data_t*)allocator->mem_cont_alloc(
-        scene->mesh_repo.used,
-        sizeof(serializer_mesh_data_t));
+    scene->mesh_repo.count = scene->material_repo.count;
+    scene->mesh_repo.meshes = 
+      (mesh_t*)allocator->mem_cont_alloc(
+        scene->mesh_repo.count,
+        sizeof(mesh_t));
     
-    for (uint32_t i = 0; i < scene->material_repo.used; ++i) {
-      serializer_mesh_data_t* mesh = scene->mesh_repo.data + i;
-      memset(mesh, 0, sizeof(serializer_mesh_data_t));
+    for (uint32_t i = 0; i < scene->material_repo.count; ++i) {
+      mesh_t *mesh = scene->mesh_repo.meshes + i;
+      mesh_def(mesh);
 
       // get the faces that share this index texture-material.
       auto& face_indices = index_to_faces[i];
@@ -853,14 +864,21 @@ populate_scene(
       uint32_t sizef3 = sizeof(float) * 3;
       
       mesh->vertices_count = vertices_count;
-      mesh->vertices = (float*)allocator->mem_alloc(sizef3 * vertices_count);
-      mesh->normals = (float*)allocator->mem_alloc(sizef3 * vertices_count);
-      mesh->uvs = (float*)allocator->mem_alloc(sizef3 * vertices_count);
-      memset(mesh->uvs, 0, sizef3 * vertices_count);
+      mesh->vertices = NULL;
+      mesh->normals = NULL;
+      mesh->uvs = NULL;
+      if (mesh->vertices_count) {
+        mesh->vertices = (float*)allocator->mem_alloc(sizef3 * vertices_count);
+        mesh->normals = (float*)allocator->mem_alloc(sizef3 * vertices_count);
+        mesh->uvs = (float*)allocator->mem_alloc(sizef3 * vertices_count);
+        memset(mesh->uvs, 0, sizef3 * vertices_count);
+      }
 
-      mesh->faces_count = face_count;
-      mesh->indices = (uint32_t*)allocator->mem_alloc(
-        sizeof(uint32_t) * vertices_count);
+      mesh->indices_count = face_count * 3;
+      if (vertices_count) {
+        mesh->indices = (uint32_t*)allocator->mem_alloc(
+          sizeof(uint32_t) * vertices_count);
+      }
       mesh->materials.used = 1;
       mesh->materials.indices[0] = i;
 
@@ -891,59 +909,58 @@ populate_scene(
 
   {
     // 1 model with multiple meshes (unnamed for now), transform to fit our need
-    scene->model_repo.used = 1;
-    scene->model_repo.data = 
-      (serializer_model_data_t*)allocator->mem_alloc(
-        sizeof(serializer_model_data_t));
-    memset(scene->model_repo.data, 0, sizeof(serializer_model_data_t));
-    scene->model_repo.data[0].meshes.used = scene->mesh_repo.used;
-    for (uint32_t i = 0; i < scene->mesh_repo.used; ++i)
-      scene->model_repo.data[0].meshes.indices[i] = i;
-    scene->model_repo.data[0].models.used = 0;
-    matrix4f_rotation_x(&scene->model_repo.data[0].transform, -K_PI/2.f);
+    scene->node_repo.count = 1;
+    scene->node_repo.nodes = (node_t*)allocator->mem_alloc(sizeof(node_t));
+    node_def(scene->node_repo.nodes);
+    scene->node_repo.nodes[0].name = cstring_create(NULL, allocator);
+    scene->node_repo.nodes[0].meshes.count = scene->mesh_repo.count;
+    scene->node_repo.nodes[0].meshes.indices = (uint32_t *)allocator->mem_alloc(
+      sizeof(uint32_t) * scene->mesh_repo.count);
+    for (uint32_t i = 0; i < scene->mesh_repo.count; ++i)
+      scene->node_repo.nodes[0].meshes.indices[i] = i;
+    scene->node_repo.nodes[0].nodes.count = 0;
+    matrix4f_rotation_x(&scene->node_repo.nodes[0].transform, -K_PI/2.f);
   }
 
   {
     // set the camera
-    scene->camera_repo.used = 1;
-    scene->camera_repo.data = 
-      (serializer_camera_t*)allocator->mem_alloc(
-        sizeof(serializer_camera_t));
-    scene->camera_repo.data[0].position.data[0] = 
-    scene->camera_repo.data[0].position.data[1] = 
-    scene->camera_repo.data[0].position.data[2] = 0.f;
+    scene->camera_repo.count = 1;
+    scene->camera_repo.cameras = 
+      (camera_t*)allocator->mem_alloc(sizeof(camera_t));
+    scene->camera_repo.cameras[0].position.data[0] = 
+    scene->camera_repo.cameras[0].position.data[1] = 
+    scene->camera_repo.cameras[0].position.data[2] = 0.f;
 
     // transform the camera to y being up.
     mult_set_m4f_p3f(
-      &scene->model_repo.data[0].transform, 
-      &scene->camera_repo.data[0].position);
-    scene->camera_repo.data[0].lookat_direction.data[0] = 
-    scene->camera_repo.data[0].lookat_direction.data[1] = 0.f;
-    scene->camera_repo.data[0].lookat_direction.data[2] = -1.f;
-    scene->camera_repo.data[0].up_vector.data[0] = 
-    scene->camera_repo.data[0].up_vector.data[2] = 0.f;
-    scene->camera_repo.data[0].up_vector.data[1] = 1.f;
+      &scene->node_repo.nodes[0].transform, 
+      &scene->camera_repo.cameras[0].position);
+    scene->camera_repo.cameras[0].lookat_direction.data[0] = 
+    scene->camera_repo.cameras[0].lookat_direction.data[1] = 0.f;
+    scene->camera_repo.cameras[0].lookat_direction.data[2] = -1.f;
+    scene->camera_repo.cameras[0].up_vector.data[0] = 
+    scene->camera_repo.cameras[0].up_vector.data[2] = 0.f;
+    scene->camera_repo.cameras[0].up_vector.data[1] = 1.f;
   }
 
   {
-    scene->light_repo.used = map_data->lights.count;
-    scene->light_repo.data = 
-      (serializer_light_data_t*)allocator->mem_cont_alloc(
-        scene->light_repo.used,
-        sizeof(serializer_light_data_t));
+    scene->light_repo.count = map_data->lights.count;
+    scene->light_repo.lights = 
+      (light_t*)allocator->mem_cont_alloc(
+        scene->light_repo.count, sizeof(light_t));
 
     {
-      for (uint32_t i = 0; i < scene->light_repo.used; ++i) {
+      for (uint32_t i = 0; i < scene->light_repo.count; ++i) {
         loader_map_light_data_t* m_light = map_data->lights.lights + i;
-        serializer_light_data_t* s_light = scene->light_repo.data + i;
-
-        memset(s_light, 0, sizeof(serializer_light_data_t));
-        s_light->type = SERIALIZER_LIGHT_TYPE_POINT;
+        light_t* s_light = scene->light_repo.lights + i;
+        light_def(s_light);
+        s_light->name = cstring_create(NULL, allocator);
+        s_light->type = LIGHT_TYPE_POINT;
         s_light->position.data[0] = (float)m_light->origin[0];
         s_light->position.data[1] = (float)m_light->origin[1];
         s_light->position.data[2] = (float)m_light->origin[2];
         mult_set_m4f_p3f(
-          &scene->model_repo.data[0].transform, 
+          &scene->node_repo.nodes[0].transform, 
           &s_light->position);
         s_light->attenuation_constant = 1.f;
         s_light->attenuation_linear = 0.01f;
@@ -973,26 +990,24 @@ populate_scene(
 
     // transform the start_position, is this required?
     mult_set_m4f_p3f(
-      &scene->model_repo.data[0].transform, 
+      &scene->node_repo.nodes[0].transform, 
       &scene->metadata.player_start);
   }
 
   {
     // for now limit it to 1.
-    scene->bvh_repo.used = 1;
-    scene->bvh_repo.data = 
-      (serializer_bvh_t*)allocator->mem_cont_alloc(
-        scene->bvh_repo.used,
-        sizeof(serializer_bvh_t));
+    scene->bvh_repo.count = 1;
+    scene->bvh_repo.bvhs = 
+      (bvh_t*)allocator->mem_cont_alloc(scene->bvh_repo.count, sizeof(bvh_t));
 
-    bvh_t* bvh = create_bvh_from_serializer_scene(scene, allocator);
+    bvh_t* bvh = create_bvh_from_scene(scene, allocator);
     // the types are binary compatible.
-    scene->bvh_repo.data[0].bounds = (serializer_aabb_t*)bvh->bounds;
-    scene->bvh_repo.data[0].count = bvh->count;
-    scene->bvh_repo.data[0].faces = bvh->faces;
-    scene->bvh_repo.data[0].normals = bvh->normals;
-    scene->bvh_repo.data[0].nodes = (serializer_bvh_node_t*)bvh->nodes;
-    scene->bvh_repo.data[0].nodes_used = bvh->nodes_used;
+    scene->bvh_repo.bvhs[0].bounds = bvh->bounds;
+    scene->bvh_repo.bvhs[0].count = bvh->count;
+    scene->bvh_repo.bvhs[0].faces = bvh->faces;
+    scene->bvh_repo.bvhs[0].normals = bvh->normals;
+    scene->bvh_repo.bvhs[0].nodes = bvh->nodes;
+    scene->bvh_repo.bvhs[0].nodes_used = bvh->nodes_used;
 
     // the pointers have been moved
     bvh->bounds = NULL;
@@ -1005,8 +1020,8 @@ populate_scene(
 
 static
 void
-map_to_serializer_meshes(
-  serializer_scene_data_t* scene,
+map_to_meshes(
+  scene_t* scene,
   const char* scene_file,
   loader_map_data_t* map_data,
   std::unordered_map<std::string, loader_png_data_t*>& texture_data,
@@ -1087,7 +1102,7 @@ texture_vec_t
 map_to_bin(
   const char* scene_file,
   loader_map_data_t* map_data, 
-  serializer_scene_data_t* scene,
+  scene_t *scene,
   const allocator_t* allocator)
 {
   std::unordered_map<std::string, std::string> sanitized_to_path;
@@ -1099,7 +1114,7 @@ map_to_bin(
     sanitized_to_path, 
     allocator);
 
-  map_to_serializer_meshes(
+  map_to_meshes(
     scene,
     scene_file, 
     map_data,

@@ -15,7 +15,8 @@
 
 
 typedef struct allocator_t allocator_t;
-typedef struct serializer_scene_data_t serializer_scene_data_t;
+// typedef struct serializer_scene_data_t serializer_scene_data_t;
+typedef struct scene_t scene_t;
 typedef struct loader_map_data_t loader_map_data_t;
 typedef std::vector<std::string> texture_vec_t;
 
@@ -23,5 +24,5 @@ texture_vec_t
 map_to_bin(
   const char* scene_file,
   loader_map_data_t* map_data, 
-  serializer_scene_data_t* scene,
+  scene_t* scene,
   const allocator_t* allocator);

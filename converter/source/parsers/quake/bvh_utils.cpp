@@ -13,6 +13,12 @@
 #include <converter/parsers/quake/bvh_utils.h>
 #include <entity/c/spatial/bvh.h>
 #include <entity/c/spatial/bvh_utils.h>
+#include <entity/c/mesh/mesh.h>
+#include <entity/c/mesh/mesh_utils.h>
+#include <entity/c/scene/node.h>
+#include <entity/c/scene/node_utils.h>
+#include <entity/c/scene/scene.h>
+#include <entity/c/scene/scene_utils.h>
 #include <serializer/serializer_scene_data.h>
 
 #define OPTIMIZE_UNSAFE 0
@@ -21,7 +27,7 @@
 static
 void
 build_bvh_node_mesh_transformed_data(
-  serializer_scene_data_t* scene,
+  scene_t* scene,
   uint32_t mesh_index,
   matrix4f transform,
   float** vertices,
@@ -30,7 +36,7 @@ build_bvh_node_mesh_transformed_data(
   uint32_t* data_index,
   const allocator_t* allocator)
 {
-  serializer_mesh_data_t* mesh = scene->mesh_repo.data + mesh_index;
+  mesh_t* mesh = scene->mesh_repo.meshes + mesh_index;
   // we need to allocate the vertices since they are transformed.
   float* ws_vertices = (float*)allocator->mem_cont_alloc(
     mesh->vertices_count * 3, sizeof(float));
@@ -52,15 +58,15 @@ build_bvh_node_mesh_transformed_data(
 
   vertices[*data_index] = ws_vertices;
   indices[*data_index] = mesh->indices;
-  indices_count[*data_index] = mesh->faces_count * 3;
+  indices_count[*data_index] = mesh->indices_count;
   ++*data_index;
 }
 
 static
 void
 build_bvh_node_transformed_data(
-  serializer_scene_data_t* scene,
-  serializer_model_data_t* node,
+  scene_t* scene,
+  node_t* node,
   matrix4f transform,
   float** vertices,
   uint32_t** indices,
@@ -70,9 +76,9 @@ build_bvh_node_transformed_data(
 {
   {
     // populate the transformed mesh data.
-    for (uint32_t i = 0; i < node->meshes.used; ) {
+    for (uint32_t i = 0; i < node->meshes.count; ) {
       uint32_t mesh_index = node->meshes.indices[i];
-      if (scene->mesh_repo.data[mesh_index].faces_count) {
+      if (scene->mesh_repo.meshes[mesh_index].indices_count) {
         build_bvh_node_mesh_transformed_data(
           scene,
           mesh_index,
@@ -83,14 +89,14 @@ build_bvh_node_transformed_data(
     }
 
     // recurively call the child nodes, after concatenating the transform.
-    for (uint32_t i = 0; i < node->models.used; ++i) {
-      uint32_t node_index = node->models.indices[i];
+    for (uint32_t i = 0; i < node->nodes.count; ++i) {
+      uint32_t node_index = node->nodes.indices[i];
       matrix4f concat_transform = transform;
       concat_transform = mult_m4f(
-        &transform, &scene->model_repo.data[node_index].transform);
+        &transform, &scene->node_repo.nodes[node_index].transform);
       build_bvh_node_transformed_data(
         scene,
-        scene->model_repo.data + node_index,
+        scene->node_repo.nodes + node_index,
         concat_transform,
         vertices, indices, indices_count, data_index, allocator); 
     }
@@ -100,28 +106,29 @@ build_bvh_node_transformed_data(
 static
 void
 build_bvh_transformed_data(
-  serializer_scene_data_t* scene,
+  scene_t* scene,
   float** vertices,
   uint32_t** indices,
   uint32_t* indices_count,
   const allocator_t* allocator)
 {
   assert(scene && vertices && indices && indices_count && allocator);
-  assert(scene->model_repo.used && "at least the root node needs to exist!");
+  assert(scene->node_repo.count && "at least the root node needs to exist!");
 
   {
     uint32_t data_index = 0;
     build_bvh_node_transformed_data(
       scene, 
-      scene->model_repo.data, 
-      scene->model_repo.data[0].transform,
+      scene->node_repo.nodes, 
+      scene->node_repo.nodes[0].transform,
       vertices, indices, indices_count, &data_index, allocator);
   }
 }
 
+
 bvh_t* 
-create_bvh_from_serializer_scene(
-  serializer_scene_data_t* scene, 
+create_bvh_from_scene(
+  scene_t* scene, 
   const allocator_t* allocator)
 {
   bvh_t* bvh = NULL;
@@ -130,8 +137,8 @@ create_bvh_from_serializer_scene(
   uint32_t* indices_count = NULL;
   uint32_t mesh_count = 0;
 
-  for (uint32_t i = 0; i < scene->mesh_repo.used; ++i) {
-    if (scene->mesh_repo.data[i].faces_count)
+  for (uint32_t i = 0; i < scene->mesh_repo.count; ++i) {
+    if (scene->mesh_repo.meshes[i].indices_count)
       ++mesh_count;
   }
 
