@@ -15,7 +15,6 @@
 
 
 typedef struct allocator_t allocator_t;
-// typedef struct serializer_scene_data_t serializer_scene_data_t;
 typedef struct scene_t scene_t;
 typedef struct loader_map_data_t loader_map_data_t;
 typedef std::vector<std::string> texture_vec_t;

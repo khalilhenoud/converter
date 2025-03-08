@@ -18,7 +18,6 @@ extern "C" {
 
 typedef struct bvh_t bvh_t;
 typedef struct scene_t scene_t;
-typedef struct serializer_scene_data_t serializer_scene_data_t;
 typedef struct allocator_t allocator_t;
 
 bvh_t* 
