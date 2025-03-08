@@ -14,26 +14,25 @@
 #include <assimp/camera.h>
 #include <assimp/types.h>
 #include <library/allocator/allocator.h>
-#include <library/string/fixed_string.h>
+#include <library/string/cstring.h>
+#include <entity/c/scene/camera.h>
+#include <entity/c/scene/scene.h>
 #include <converter/utils.h>
 #include <converter/parsers/assimp/lights.h>
-#include <serializer/serializer_scene_data.h>
 
 
 void
 populate_cameras(
-  serializer_scene_data_t* scene_bin, 
-  const aiScene* pScene, 
-  const allocator_t* allocator)
+  scene_t *scene, 
+  const aiScene *pScene, 
+  const allocator_t *allocator)
 {
-  scene_bin->camera_repo.used = pScene->mNumCameras;
-  scene_bin->camera_repo.data = 
-  (serializer_camera_t*)allocator->mem_cont_alloc(
-    sizeof(serializer_camera_t), 
-    scene_bin->camera_repo.used);
+  scene->camera_repo.count = pScene->mNumCameras;
+  scene->camera_repo.cameras = (camera_t*)allocator->mem_cont_alloc(
+    sizeof(camera_t), scene->camera_repo.count);
 
-  for (uint32_t i = 0; i < scene_bin->camera_repo.used; ++i) {
-    serializer_camera_t *current = scene_bin->camera_repo.data + i;
+  for (uint32_t i = 0; i < scene->camera_repo.count; ++i) {
+    camera_t *camera = scene->camera_repo.cameras + i;
     aiCamera* pCamera = pScene->mCameras[i];
 
     aiQuaternion rotation;
@@ -49,9 +48,8 @@ populate_cameras(
       assert(0);
 
     // camera has no name right now
-    // copy_str(current->name, pLight->mName.C_Str(), AI_SUCCESS);
-    copy_vec3(&current->position, &position, AI_SUCCESS);
-    copy_vec3(&current->lookat_direction, &direction, AI_SUCCESS);
-    copy_vec3(&current->up_vector, &up, AI_SUCCESS);
+    copy_vec3(&camera->position, &position, AI_SUCCESS);
+    copy_vec3(&camera->lookat_direction, &direction, AI_SUCCESS);
+    copy_vec3(&camera->up_vector, &up, AI_SUCCESS);
   }
 }

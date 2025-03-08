@@ -26,25 +26,18 @@
 #include <converter/parsers/quake/map.h>
 #include <converter/parsers/quake/bvh_utils.h>
 #include <entity/c/spatial/bvh.h>
-#include <entity/c/spatial/bvh_utils.h>
 #include <entity/c/mesh/mesh.h>
 #include <entity/c/mesh/mesh_utils.h>
 #include <entity/c/mesh/color.h>
 #include <entity/c/mesh/texture.h>
-#include <entity/c/mesh/texture_utils.h>
 #include <entity/c/mesh/material.h>
-#include <entity/c/mesh/material_utils.h>
+#include <entity/c/misc/font.h>
 #include <entity/c/scene/light.h>
-#include <entity/c/scene/light_utils.h>
 #include <entity/c/scene/camera.h>
-#include <entity/c/scene/camera_utils.h>
 #include <entity/c/scene/node.h>
-#include <entity/c/scene/node_utils.h>
 #include <entity/c/scene/scene.h>
-#include <entity/c/scene/scene_utils.h>
 #include <loaders/loader_map_data.h>
 #include <loaders/loader_png.h>
-#include <serializer/serializer_scene_data.h>
 
 
 typedef
@@ -944,6 +937,16 @@ populate_scene(
   }
 
   {
+    // set the font
+    scene->font_repo.count = 1;
+    scene->font_repo.fonts = (font_t *)allocator->mem_alloc(sizeof(font_t));
+    scene->font_repo.fonts[0].data_file = cstring_create(
+      "\\font\\FontData.csv", allocator);
+    scene->font_repo.fonts[0].image_file = cstring_create(
+      "\\font\\ExportedFont.png", allocator);
+  }
+
+  {
     scene->light_repo.count = map_data->lights.count;
     scene->light_repo.lights = 
       (light_t*)allocator->mem_cont_alloc(
@@ -1014,7 +1017,8 @@ populate_scene(
     bvh->faces = NULL;
     bvh->normals = NULL;
     bvh->nodes = NULL;
-    free_bvh(bvh, allocator);
+    bvh_cleanup(bvh, allocator);
+    allocator->mem_free(bvh);
   }
 }
 
@@ -1056,7 +1060,8 @@ map_to_meshes(
     faces.push_back({ {p1, p2, p3}, normal});
   }
 
-  free_mesh(cube, allocator);
+  mesh_cleanup(cube, allocator);
+  allocator->mem_free(cube);
 
   // organize the face per index into the image_paths.
   std::unordered_map<uint32_t, std::vector<uint32_t>> index_to_faces;

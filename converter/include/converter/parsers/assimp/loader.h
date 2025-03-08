@@ -15,5 +15,5 @@ typedef struct allocator_t allocator_t;
 
 void
 load_assimp(
-  const char* scene_file, 
-  const allocator_t* allocator);
+  const char *scene_file, 
+  const allocator_t *allocator);

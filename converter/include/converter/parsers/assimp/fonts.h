@@ -1,11 +1,11 @@
 /**
- * @file cameras.h
+ * @file fonts.h
  * @author khalilhenoud@gmail.com
  * @brief 
  * @version 0.1
- * @date 2024-03-03
+ * @date 2025-03-08
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
 #pragma once
@@ -13,10 +13,8 @@
 
 typedef struct scene_t scene_t;
 typedef struct allocator_t allocator_t;
-struct aiScene;
 
 void
-populate_cameras(
-  scene_t *scene, 
-  const aiScene *pScene, 
+populate_default_font(
+  scene_t *scene,
   const allocator_t *allocator);

@@ -12,36 +12,30 @@
 #include <assimp/types.h>
 #include <assimp/material.h>
 #include <library/allocator/allocator.h>
-#include <library/string/fixed_string.h>
+#include <library/string/cstring.h>
+#include <entity/c/mesh/texture.h>
+#include <entity/c/scene/scene.h>
 #include <converter/utils.h>
 #include <converter/parsers/assimp/textures.h>
-#include <serializer/serializer_scene_data.h>
 
 
 void
 populate_textures(
-  serializer_scene_data_t* scene_bin,
+  scene_t* scene,
   const allocator_t* allocator,
   std::vector<std::string> textures)
 {
   // adding the textures
-  scene_bin->texture_repo.used = (uint32_t)textures.size();
-  if (scene_bin->texture_repo.used) {
-    scene_bin->texture_repo.data =
-      (serializer_texture_data_t*)allocator->mem_cont_alloc(
-        sizeof(serializer_texture_data_t),
-        scene_bin->texture_repo.used);
+  scene->texture_repo.count = (uint32_t)textures.size();
+  if (scene->texture_repo.count) {
+    scene->texture_repo.textures = (texture_t*)allocator->mem_cont_alloc(
+      sizeof(texture_t), scene->texture_repo.count);
 
-    for (uint32_t i = 0; i < scene_bin->texture_repo.used; ++i) {
-      memset(
-        scene_bin->texture_repo.data[i].path.data, 0,
-        sizeof(scene_bin->texture_repo.data[i].path.data));
+    for (uint32_t i = 0; i < scene->texture_repo.count; ++i) {
       // only keep the file name.
       textures[i] = textures[i].substr(textures[i].find_last_of("/\\") + 1);
-      memcpy(
-        scene_bin->texture_repo.data[i].path.data,
-        textures[i].c_str(),
-        strlen(textures[i].c_str()));
+      scene->texture_repo.textures[i].path = cstring_create(
+        textures[i].c_str(), allocator);
     }
   }
 }

@@ -12,14 +12,9 @@
 #include <library/allocator/allocator.h>
 #include <converter/parsers/quake/bvh_utils.h>
 #include <entity/c/spatial/bvh.h>
-#include <entity/c/spatial/bvh_utils.h>
 #include <entity/c/mesh/mesh.h>
-#include <entity/c/mesh/mesh_utils.h>
 #include <entity/c/scene/node.h>
-#include <entity/c/scene/node_utils.h>
 #include <entity/c/scene/scene.h>
-#include <entity/c/scene/scene_utils.h>
-#include <serializer/serializer_scene_data.h>
 
 #define OPTIMIZE_UNSAFE 0
 
@@ -154,7 +149,7 @@ create_bvh_from_scene(
     build_bvh_transformed_data(
       scene, vertices, indices, indices_count, allocator);
 
-    bvh = create_bvh(
+    bvh = bvh_create(
       vertices, 
       indices, 
       indices_count, 

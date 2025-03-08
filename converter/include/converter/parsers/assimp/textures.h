@@ -14,12 +14,12 @@
 #include <string>
 
 
-typedef struct serializer_scene_data_t serializer_scene_data_t;
+typedef struct scene_t scene_t;
 typedef struct allocator_t allocator_t;
 struct aiScene;
 
 void
 populate_textures(
-  serializer_scene_data_t* scene_bin,
-  const allocator_t* allocator,
+  scene_t *scene,
+  const allocator_t *allocator,
   std::vector<std::string> textures);

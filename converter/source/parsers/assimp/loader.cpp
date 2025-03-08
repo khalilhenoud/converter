@@ -13,7 +13,9 @@
 #include <string>
 #include <filesystem>
 #include <library/allocator/allocator.h>
-#include <serializer/serializer_bin.h>
+#include <library/containers/cvector.h>
+#include <library/streams/binary_stream.h>
+#include <serializer/utils.h>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -25,6 +27,8 @@
 #include <converter/parsers/assimp/textures.h>
 #include <converter/parsers/assimp/lights.h>
 #include <converter/parsers/assimp/cameras.h>
+#include <converter/parsers/assimp/fonts.h>
+#include <entity/c/scene/scene.h>
 
 
 extern std::string data_folder;
@@ -50,17 +54,15 @@ load_assimp(
   else {
     printf("Parsing was successful");
 
-    serializer_scene_data_t* scene_bin = 
-      (serializer_scene_data_t*)allocator->mem_alloc(
-        sizeof(serializer_scene_data_t));
-
+    scene_t *scene = scene_create(NULL, allocator);
     auto textures = 
-    populate_materials(scene_bin, pScene, allocator);
-    populate_textures(scene_bin, allocator, textures);
-    populate_lights(scene_bin, pScene, allocator);
-    populate_meshes(scene_bin, pScene, allocator);
-    populate_nodes(scene_bin, pScene, allocator);
-    populate_cameras(scene_bin, pScene, allocator);
+    populate_materials(scene, pScene, allocator);
+    populate_textures(scene, allocator, textures);
+    populate_lights(scene, pScene, allocator);
+    populate_meshes(scene, pScene, allocator);
+    populate_nodes(scene, pScene, allocator);
+    populate_cameras(scene, pScene, allocator);
+    populate_default_font(scene, allocator);
 
     // get the trimmed file name, since I want to use it to create a folder.
     std::string name = get_simple_name(scene_file);
@@ -72,7 +74,25 @@ load_assimp(
     
     // serialize the bin file.
     std::string target_bin = target_path + "\\" + name + ".bin";
-    serialize_bin(target_bin.c_str(), scene_bin);
-    free_bin(scene_bin, allocator);
+    binary_stream_t stream;
+    binary_stream_def(&stream);
+    binary_stream_setup(&stream, allocator);
+    scene_serialize(scene, &stream);
+
+    {
+      file_handle_t file;
+      file = open_file(target_bin.c_str(), 
+        file_open_flags_t(FILE_OPEN_MODE_WRITE | FILE_OPEN_MODE_BINARY));
+      assert((void *)file != NULL);
+      write_buffer(
+        file, 
+        stream.data->data, stream.data->elem_data.size, stream.data->size);
+      close_file(file);
+    }
+    
+    binary_stream_cleanup(&stream);
+    scene_free(scene, allocator);
   }
+
+  printf("done!");
 }

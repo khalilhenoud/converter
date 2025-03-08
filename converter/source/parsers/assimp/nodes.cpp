@@ -14,32 +14,33 @@
 #include <assimp/material.h>
 #include <assimp/scene.h>
 #include <library/allocator/allocator.h>
-#include <library/string/fixed_string.h>
+#include <library/string/cstring.h>
+#include <entity/c/scene/node.h>
+#include <entity/c/scene/scene.h>
 #include <converter/utils.h>
 #include <converter/parsers/assimp/nodes.h>
-#include <serializer/serializer_scene_data.h>
 
 
 void
 populate_nodes(
-  serializer_scene_data_t* scene_bin, 
+  scene_t *scene, 
   const aiScene* pScene, 
   const allocator_t* allocator)
 {
   // read the nodes.
   std::function<uint32_t(aiNode*)> count_nodes = 
   [&](aiNode* node) -> uint32_t {
-    uint32_t total = node->mNumChildren;  
+    uint32_t total = node->mNumChildren;
     for (uint32_t i = 0; i < node->mNumChildren; ++i)
       total += count_nodes(node->mChildren[i]);
     return total;
   };
 
-  std::function<void(uint32_t&, serializer_model_data_t*, aiNode*)> 
+  std::function<void(uint32_t&, node_t*, aiNode*)> 
   populate_node = [&](
     uint32_t& model_index, 
-    serializer_model_data_t* target, 
-    aiNode* source) {
+    node_t *target, 
+    aiNode *source) {
 
     ++model_index;
 
@@ -51,29 +52,31 @@ populate_nodes(
       transform.c1, transform.c2, transform.c3, transform.c4,
       transform.d1, transform.d2, transform.d3, transform.d4};
     memcpy(target->transform.data, data, sizeof(float) * 16);
-    copy_str(target->name, source->mName.C_Str(), AI_SUCCESS);
 
-    target->meshes.used = source->mNumMeshes;
+    target->name = cstring_create(source->mName.C_Str(), allocator);
+
+    target->meshes.count = source->mNumMeshes;
+    target->meshes.indices = (uint32_t *)allocator->mem_cont_alloc(
+      target->meshes.count, sizeof(uint32_t));
     memcpy(
       target->meshes.indices, 
       source->mMeshes, 
       sizeof(uint32_t) * source->mNumMeshes); 
     
-    target->models.used = source->mNumChildren;
+    target->nodes.count = source->mNumChildren;
+    target->nodes.indices = (uint32_t *)allocator->mem_cont_alloc(
+      target->nodes.count, sizeof(uint32_t));
     for (uint32_t i = 0; i < source->mNumChildren; ++i) {
-      aiNode* child = source->mChildren[i];
-      serializer_model_data_t* child_target = 
-        scene_bin->model_repo.data + model_index;
-      target->models.indices[i] = model_index;
+      aiNode *child = source->mChildren[i];
+      node_t *child_target = scene->node_repo.nodes + model_index;
+      target->nodes.indices[i] = model_index;
       populate_node(model_index, child_target, child);
     }
   };
 
-  scene_bin->model_repo.used = count_nodes(pScene->mRootNode) + 1;
-  scene_bin->model_repo.data = 
-    (serializer_model_data_t *)allocator->mem_cont_alloc(
-      sizeof(serializer_model_data_t), 
-      scene_bin->model_repo.used);
+  scene->node_repo.count = count_nodes(pScene->mRootNode) + 1;
+  scene->node_repo.nodes = (node_t *)allocator->mem_cont_alloc(
+    sizeof(node_t), scene->node_repo.count);
   uint32_t start = 0;
-  populate_node(start, scene_bin->model_repo.data, pScene->mRootNode);
+  populate_node(start, scene->node_repo.nodes, pScene->mRootNode);
 }

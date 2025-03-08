@@ -13,25 +13,17 @@
 #include <cassert>
 #include <vector>
 #include <string>
+#include <filesystem>
 #include <assimp/types.h>
 #include <assimp/material.h>
-#include <library/string/fixed_string.h>
-#include <serializer/serializer_scene_data.h>
-#include <filesystem>
+#include <math/c/vector3f.h>
+#include <entity/c/mesh/material.h>
+#include <entity/c/mesh/material_utils.h>
+#include <entity/c/mesh/color.h>
 
 
 typedef struct allocator_t allocator_t;
 struct aiScene;
-
-inline
-void
-copy_str(fixed_str_t& target, const char* source, aiReturn do_copy) 
-{
-  if (do_copy == AI_SUCCESS) {
-    memset(target.data, 0, sizeof(target.data));
-    memcpy(target.data, source, strlen(source));
-  }
-}
 
 inline
 void
@@ -44,7 +36,7 @@ copy_float(float* target, float* source, aiReturn do_copy)
 inline
 void
 copy_color(
-  serializer_color_data_t* target, 
+  color_rgba_t* target, 
   aiColor4D* source, 
   aiReturn do_copy) 
 {
@@ -59,7 +51,7 @@ copy_color(
 inline
 void
 copy_color(
-  serializer_color_data_t* target, 
+  color_rgba_t* target, 
   aiColor3D* source, 
   aiReturn do_copy) 
 {
@@ -74,8 +66,8 @@ copy_color(
 inline
 void
 copy_vec3(
-  vector3f* target, 
-  aiVector3D* source, 
+  vector3f *target, 
+  aiVector3D *source, 
   aiReturn do_copy)
 {
   if (do_copy == AI_SUCCESS) {
@@ -88,7 +80,7 @@ copy_vec3(
 inline
 void 
 copy_texture_transform(
-  serializer_texture_properties_t* target, 
+  texture_properties_t* target, 
   aiUVTransform* source,
   aiReturn do_copy) 
 {
