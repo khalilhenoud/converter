@@ -1017,7 +1017,7 @@ populate_scene(
     bvh->faces = NULL;
     bvh->normals = NULL;
     bvh->nodes = NULL;
-    bvh_cleanup(bvh, allocator);
+    bvh->nodes_used = bvh->count = 0;
     allocator->mem_free(bvh);
   }
 }
