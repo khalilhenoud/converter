@@ -56,21 +56,27 @@ populate_nodes(
     target->name = cstring_create(source->mName.C_Str(), allocator);
 
     target->meshes.count = source->mNumMeshes;
-    target->meshes.indices = (uint32_t *)allocator->mem_cont_alloc(
-      target->meshes.count, sizeof(uint32_t));
-    memcpy(
-      target->meshes.indices, 
-      source->mMeshes, 
-      sizeof(uint32_t) * source->mNumMeshes); 
+    target->meshes.indices = NULL;
+    if (target->meshes.count) {
+      target->meshes.indices = (uint32_t*)allocator->mem_cont_alloc(
+        target->meshes.count, sizeof(uint32_t));
+      memcpy(
+        target->meshes.indices,
+        source->mMeshes,
+        sizeof(uint32_t) * source->mNumMeshes);
+    }
     
     target->nodes.count = source->mNumChildren;
-    target->nodes.indices = (uint32_t *)allocator->mem_cont_alloc(
-      target->nodes.count, sizeof(uint32_t));
-    for (uint32_t i = 0; i < source->mNumChildren; ++i) {
-      aiNode *child = source->mChildren[i];
-      node_t *child_target = scene->node_repo.nodes + model_index;
-      target->nodes.indices[i] = model_index;
-      populate_node(model_index, child_target, child);
+    target->nodes.indices = NULL;
+    if (target->nodes.count) {
+      target->nodes.indices = (uint32_t*)allocator->mem_cont_alloc(
+        target->nodes.count, sizeof(uint32_t));
+      for (uint32_t i = 0; i < source->mNumChildren; ++i) {
+        aiNode* child = source->mChildren[i];
+        node_t* child_target = scene->node_repo.nodes + model_index;
+        target->nodes.indices[i] = model_index;
+        populate_node(model_index, child_target, child);
+      }
     }
   };
 

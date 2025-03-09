@@ -28,6 +28,7 @@
 #include <converter/parsers/assimp/lights.h>
 #include <converter/parsers/assimp/cameras.h>
 #include <converter/parsers/assimp/fonts.h>
+#include <converter/parsers/assimp/bvhs.h>
 #include <entity/c/scene/scene.h>
 
 
@@ -63,6 +64,7 @@ load_assimp(
     populate_nodes(scene, pScene, allocator);
     populate_cameras(scene, pScene, allocator);
     populate_default_font(scene, allocator);
+    populate_bvhs(scene, allocator);
 
     // get the trimmed file name, since I want to use it to create a folder.
     std::string name = get_simple_name(scene_file);
@@ -94,5 +96,6 @@ load_assimp(
     scene_free(scene, allocator);
   }
 
+  printf("\n");
   printf("done!");
 }
