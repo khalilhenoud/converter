@@ -18,7 +18,6 @@
 #include <assimp/material.h>
 #include <math/c/vector3f.h>
 #include <entity/c/mesh/material.h>
-#include <entity/c/mesh/material_utils.h>
 #include <entity/c/mesh/color.h>
 
 
