@@ -8,12 +8,7 @@
  * @copyright Copyright (c) 2023
  * 
  */
-#ifndef CONVERTER_BVH_UTILS_H
-#define CONVERTER_BVH_UTILS_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#pragma once
 
 
 typedef struct bvh_t bvh_t;
@@ -24,9 +19,3 @@ bvh_t*
 create_bvh_from_scene(
   scene_t* scene, 
   const allocator_t* allocator);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif

@@ -13,6 +13,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # add the executable
 add_executable(${PROJECT_NAME} 
 				./source/main.cpp
+        ./source/parsers/quake/topology/point.cpp
+        ./source/parsers/quake/topology/brush.cpp
+        ./source/parsers/quake/topology/polygon.cpp
+        ./source/parsers/quake/string_utils.cpp
         ./source/parsers/quake/bvh_utils.cpp
         ./source/parsers/quake/loader.cpp
         ./source/parsers/quake/map.cpp
