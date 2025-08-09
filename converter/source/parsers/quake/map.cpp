@@ -9,7 +9,6 @@
  * 
  */
 #include <unordered_map>
-#include <utility>
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -19,10 +18,6 @@
 #include <library/string/cstring.h>
 #include <math/c/vector3f.h>
 #include <math/c/face.h>
-#include <converter/utils.h>
-#include <converter/parsers/quake/map.h>
-#include <converter/parsers/quake/bvh_utils.h>
-#include <converter/parsers/quake/string_utils.h>
 #include <entity/c/spatial/bvh.h>
 #include <entity/c/mesh/mesh.h>
 #include <entity/c/mesh/mesh_utils.h>
@@ -36,29 +31,41 @@
 #include <entity/c/scene/scene.h>
 #include <loaders/loader_map_data.h>
 #include <loaders/loader_png.h>
+#include <converter/utils.h>
 #include <converter/parsers/quake/topology/brush.h>
 #include <converter/parsers/quake/topology/texture_data.h>
+#include <converter/parsers/quake/map.h>
+#include <converter/parsers/quake/bvh_utils.h>
+#include <converter/parsers/quake/string_utils.h>
 
+
+struct texture_entry_t {
+  std::string path;
+  loader_png_data_t* png_data = nullptr;
+  uint32_t index = 0;
+  std::vector<uint32_t> indices;
+};
+
+using texture_map_t = std::unordered_map<std::string, texture_entry_t>;
 
 static
 void
 free_texture_data(
-  std::unordered_map<std::string, loader_png_data_t*>& texture_data,
+  texture_map_t& tex_map,
   const allocator_t* allocator)
 {
-  for (auto& data : texture_data)
-    free_png(data.second, allocator);
+  for (auto& data : tex_map)
+    free_png(data.second.png_data, allocator);
 
-  texture_data.clear();
+  tex_map.clear();
 }
 
 static
 texture_vec_t
 load_texture_data(
   const char* scene_file, 
-  std::string texture_directory, 
-  std::unordered_map<std::string, loader_png_data_t*>& data,
-  std::unordered_map<std::string, std::string>& sanitized_to_path,
+  std::string wad_directory, 
+  texture_map_t& tex_map,
   const allocator_t* allocator)
 {
   extern std::string tools_folder;
@@ -68,8 +75,8 @@ load_texture_data(
   std::string directory = scene_file;
   auto iter = directory.find_last_of("\\/");
   directory = directory.substr(0, iter + 1);
-  std::replace(texture_directory.begin(), texture_directory.end(), '/', '\\');
-  directory += texture_directory;
+  std::replace(wad_directory.begin(), wad_directory.end(), '/', '\\');
+  directory += wad_directory;
 
   {
     // get the canonical wad file path.
@@ -95,19 +102,21 @@ load_texture_data(
 
   // get all the files, load all the png.
   auto files = get_all_files_in_directory(directory);
+  uint32_t index = 0;
   for (auto& file : files) {
     std::string name = file.u8string();
     textures.push_back(name);
     // get the simple texture name (no extention, no path).
     name = name.substr(name.find_last_of("\\") + 1);
     name = name.substr(0, name.find_last_of("."));
-    // remove _fbr
-    auto sanitized_name = name;
-    string_utils::replace(sanitized_name, "_fbr", "");
-
+    // remove '_fbr', qpakman appends '_fbr' to some textures after extraction. 
+    // in addition it automatically replaces os unsafe tokens with substrings
+    // e.g: '*' becomes 'star_'.
+    auto path = name + ".png";
+    auto sanitized = name;
+    string_utils::replace(sanitized, "_fbr", "");
     loader_png_data_t* image = load_png(file.u8string().c_str(), allocator);
-    data[sanitized_name] = image;
-    sanitized_to_path[sanitized_name] = name + ".png";
+    tex_map[sanitized] = { path, image, index++ };
   }
 
   return textures;
@@ -118,15 +127,13 @@ void
 populate_scene(
   scene_t *scene,
   loader_map_data_t* map_data,
-  std::unordered_map<uint32_t, std::vector<uint32_t>>& index_to_faces,
   std::vector<topology::face_t>& map_faces,
-  std::unordered_map<std::string, uint32_t>& image_paths,
-  std::unordered_map<uint32_t, std::string>& index_to_path,
+  texture_map_t& tex_map,
   const allocator_t* allocator)
 {
   {
     // setup the scene.
-    scene->texture_repo.count = index_to_path.size();
+    scene->texture_repo.count = tex_map.size();
     scene->texture_repo.textures = 
       (texture_t*)allocator->mem_cont_alloc(
         scene->texture_repo.count, sizeof(texture_t));
@@ -137,10 +144,11 @@ populate_scene(
       (material_t*)allocator->mem_cont_alloc(
         scene->material_repo.count, sizeof(material_t));
 
-    for (uint32_t i = 0, count = index_to_path.size(); i < count; ++i) {
+    for (auto& entry : tex_map) {
+      uint32_t i = entry.second.index;
       scene->texture_repo.textures[i].path = cstring_create(
-        index_to_path[i].c_str(), allocator);
-
+        entry.second.path.c_str(), allocator);
+      
       {
         material_def(scene->material_repo.materials + i);
         scene->material_repo.materials[i].name = cstring_create(
@@ -178,12 +186,13 @@ populate_scene(
         scene->mesh_repo.count,
         sizeof(mesh_t));
     
-    for (uint32_t i = 0; i < scene->material_repo.count; ++i) {
+    for (auto& entry : tex_map) {
+      uint32_t i = entry.second.index;
       mesh_t *mesh = scene->mesh_repo.meshes + i;
       mesh_def(mesh);
 
       // get the faces that share this index texture-material.
-      auto& face_indices = index_to_faces[i];
+      auto& face_indices = entry.second.indices;
       uint32_t face_count = face_indices.size();
       uint32_t vertices_count = face_count * 3;
       uint32_t sizef3 = sizeof(float) * 3;
@@ -360,50 +369,34 @@ map_to_meshes(
   scene_t* scene,
   const char* scene_file,
   loader_map_data_t* map_data,
-  std::unordered_map<std::string, loader_png_data_t*>& texture_data,
-  std::unordered_map<std::string, std::string>& sanitized_to_path,
+  texture_map_t& tex_map,
   const allocator_t* allocator)
 {
-  // convert sanitized_to_path to both image_paths and index_to_path.
-  std::unordered_map<std::string, uint32_t> image_paths;
-  std::unordered_map<uint32_t, std::string> index_to_path;
-  {
-    uint32_t index = 0;
-    for (auto& entry : sanitized_to_path) {
-      image_paths[entry.first] = index;
-      index_to_path[index] = entry.second;
-      ++index;
-    }
-  }
-  
-  // organize the face per index into the image_paths.
-  std::unordered_map<uint32_t, std::vector<uint32_t>> index_to_faces;
-  std::vector<topology::face_t> map_faces;
-
+  // we only need the width and height
   std::unordered_map<std::string, topology::texture_info_t> textures_info;
-  for (auto& entry : texture_data)
-    textures_info[entry.first] = { entry.second->width, entry.second->height };
+  for (auto& entry : tex_map)
+    textures_info[entry.first] = { 
+      entry.second.png_data->width, entry.second.png_data->height };
 
-  {
-    uint32_t counter = 0;
-    for (uint32_t i = 0; i < map_data->world.brush_count; ++i) {
-      const topology::brush_t brush(map_data->world.brushes + i, textures_info);
-      std::vector<topology::face_t> faces = brush.to_faces();
-      
-      for (auto& face : faces)
-        index_to_faces[image_paths[face.texture]].push_back(counter++);
-      
-      map_faces.insert(map_faces.end(), faces.begin(), faces.end());
+  std::vector<topology::face_t> map_faces;
+  for (uint32_t i = 0; i < map_data->world.brush_count; ++i) {
+    const topology::brush_t brush(map_data->world.brushes + i, textures_info);
+    std::vector<topology::face_t> faces = brush.to_faces();
+
+    for (uint32_t j = 0; j < faces.size(); ++j) {
+      auto& face = faces[j];
+      if (face.texture.size())
+        tex_map[face.texture].indices.push_back(map_faces.size() + j);
     }
+    
+    map_faces.insert(map_faces.end(), faces.begin(), faces.end());
   }
 
   populate_scene(
     scene, 
     map_data, 
-    index_to_faces, 
     map_faces, 
-    image_paths, 
-    index_to_path, 
+    tex_map,
     allocator);
 }
 
@@ -414,24 +407,21 @@ map_to_bin(
   scene_t *scene,
   const allocator_t* allocator)
 {
-  std::unordered_map<std::string, std::string> sanitized_to_path;
-  std::unordered_map<std::string, loader_png_data_t*> texture_data;
+  texture_map_t tex_map;
   texture_vec_t textures = load_texture_data(
     scene_file, 
     map_data->world.wad, 
-    texture_data, 
-    sanitized_to_path, 
+    tex_map,
     allocator);
 
   map_to_meshes(
     scene,
     scene_file, 
     map_data,
-    texture_data,
-    sanitized_to_path, 
+    tex_map,
     allocator);
   
-  free_texture_data(texture_data, allocator);
+  free_texture_data(tex_map, allocator);
 
   return textures;
 }
