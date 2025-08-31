@@ -46,7 +46,7 @@ struct polygon_t {
   clip(const plane_t& plane) const;
 
   std::vector<face_t>
-  triangulate() const;
+  triangulate(bool discretize_values = false) const;
 
   // removes redundant vertices and edges, returns whether we have a valid face
   bool

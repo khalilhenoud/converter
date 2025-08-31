@@ -93,11 +93,52 @@ polygon_t::clip(const plane_t& plane) const
   return data;
 }
 
+inline
+double 
+pow(double value, double power)
+{
+  double total = value;
+  while (--power)
+      total *= value;
+  return total;
+}
+
+static
+float 
+discretize(
+  float value, 
+  uint32_t steps = 32, 
+  uint32_t digits = 3)
+{
+  steps = steps < 1 ? 1 : steps;
+  {
+    float mult = pow(10.f, digits);
+    float delta = 1.f / (float)steps;
+    float sdelta = delta * mult;
+    float delta_half = 0.5f * delta;
+    float sdelta_half = delta_half * mult;
+
+    float converted = (value - (int32_t)value) * mult;
+    int32_t interim = (int32_t)((converted + sdelta_half) / sdelta);
+    float fval = ((int32_t)(interim * sdelta)) / mult; 
+    float discretized = ((int32_t)value) + fval;
+    return discretized;
+  }
+}
+
 std::vector<face_t>
-polygon_t::triangulate() const
+polygon_t::triangulate(bool discretize_values) const
 {
   std::vector<face_t> tris;
   polygon_t polygon = *this;
+
+  if (discretize_values) {
+    for (auto& point : polygon.points) {
+      point.data[0] = discretize(point.data[0]);
+      point.data[1] = discretize(point.data[1]);
+      point.data[2] = discretize(point.data[2]);
+    }
+  }
 
   // iterate to locate best candidate for ear clipping
   while (polygon.points.size() > 3) {
