@@ -126,7 +126,7 @@ brush_t::to_faces() const
 
   std::vector<face_t> faces;
   for (auto& stone_face : stone) {
-    auto tris = stone_face.triangulate(true);
+    auto tris = stone_face.triangulate();
     faces.insert(faces.end(), tris.begin(), tris.end());
   }
 
