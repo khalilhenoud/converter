@@ -34,6 +34,23 @@ distance_points(const point3f& p1, const point3f& p2)
 }
 
 inline
+float
+distance_points_squared(const point3f& p1, const point3f& p2)
+{
+  vector3f diff = diff_v3f(&p1, &p2);
+  return length_squared_v3f(&diff);
+}
+
+inline
+point3f
+average_points(const point3f& p1, const point3f& p2)
+{
+  point3f averaged = add_v3f(&p1, &p2);
+  mult_set_v3f(&averaged, 0.5f);
+  return averaged;
+}
+
+inline
 bool
 identical_points(const point3f& p1, const point3f& p2, float epsilon = 1.f/32.f)
 {

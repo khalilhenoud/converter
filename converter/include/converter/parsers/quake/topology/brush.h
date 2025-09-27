@@ -32,8 +32,8 @@ public:
     const loader_map_brush_data_t* brush, 
     std::unordered_map<std::string, texture_info_t>& textures_info);
 
-  std::vector<face_t>
-  to_faces() const;
+  std::vector<polygon_t>
+  to_polygons() const;
 
   static
   std::optional<polygon_t>
@@ -43,6 +43,28 @@ public:
 
 private:
   std::vector<plane_t> planes;
+};
+
+// poly_brush_t is optimized for welding, this would be useful when welding many
+// brushes together
+class poly_brush_t {
+public:
+  poly_brush_t(const brush_t* brush, const float radius = 1.f/16.f);
+
+  std::vector<face_t>
+  to_faces() const;
+
+private:
+  std::vector<polygon_t> polygons;
+  
+  struct indexed_poly_t {
+    std::vector<uint32_t> indices;
+  }; 
+
+  struct weld_meta_t {
+    std::vector<point3f> positions;
+    std::vector<indexed_poly_t> polygons; // 1 to 1 with poly_brush_t::polygons
+  } meta;
 };
 
 }

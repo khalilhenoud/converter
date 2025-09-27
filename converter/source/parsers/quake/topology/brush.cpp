@@ -95,8 +95,8 @@ brush_t::brush_t(
   }
 }
 
-std::vector<face_t>
-brush_t::to_faces() const
+std::vector<polygon_t>
+brush_t::to_polygons() const
 {
   std::vector<polygon_t> stone = make_cube();
 
@@ -124,13 +124,7 @@ brush_t::to_faces() const
     stone = cut_stone;
   }
 
-  std::vector<face_t> faces;
-  for (auto& stone_face : stone) {
-    auto tris = stone_face.triangulate();
-    faces.insert(faces.end(), tris.begin(), tris.end());
-  }
-
-  return faces;
+  return stone;
 }
 
 std::optional<polygon_t>
@@ -225,6 +219,72 @@ brush_t::make_face(
     std::reverse(polygon.points.begin(), polygon.points.end());
   
   return polygon;
+}
+
+poly_brush_t::poly_brush_t(const brush_t* brush, const float radius)
+  : polygons{brush->to_polygons()}
+{
+  const float r2 = radius * radius;
+  std::vector<uint32_t> hits;
+
+  auto is_at = [this, r2, &hits](point3f position) -> int32_t {
+    for (uint32_t i = 0, count = meta.positions.size(); i < count; ++i) {
+      point3f target = meta.positions[i];
+      mult_set_v3f(&target, 1.f/(float)hits[i]);
+
+      float length = distance_points_squared(position, target);
+      if (length <= r2)
+        return (int32_t)i;
+    }
+
+    return -1;
+  };
+
+  for (auto& polygon : polygons) {
+    // create the indexing structure per polygon
+    meta.polygons.push_back(indexed_poly_t{});
+    indexed_poly_t& indexed_poly = meta.polygons.back();
+
+    for (auto& vertex : polygon.points) {
+      int32_t index = is_at(vertex);
+
+      if (index == -1) {
+        indexed_poly.indices.push_back(meta.positions.size());
+        meta.positions.push_back(vertex);
+        hits.push_back(1);
+      } else {
+        indexed_poly.indices.push_back((uint32_t)index);
+        add_set_v3f(&meta.positions[index], &vertex);
+        hits[index]++;
+      }
+    }   
+  }
+
+  // normalize meta.positions
+  for (uint32_t i = 0, count = meta.positions.size(); i < count; ++i) {
+    point3f& target = meta.positions[i];
+    mult_set_v3f(&target, 1.f/(float)hits[i]);
+  }
+
+  // update the polygons vertices with the averaged positions
+  for (uint32_t i = 0, count = meta.polygons.size(); i < count; ++i) {
+    indexed_poly_t& indexed_poly = meta.polygons[i];
+    polygon_t& polygon = polygons[i];
+    for (uint32_t j = 0; j < indexed_poly.indices.size(); ++j)
+      polygon.points[j] = meta.positions[indexed_poly.indices[j]];
+  }
+}
+
+std::vector<face_t>
+poly_brush_t::to_faces() const
+{
+  std::vector<face_t> faces;
+  for (auto& polygon : polygons) {
+    auto tris = polygon.triangulate();
+    faces.insert(faces.end(), tris.begin(), tris.end());
+  }
+  
+  return faces;
 }
 
 }

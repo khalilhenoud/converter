@@ -381,7 +381,8 @@ map_to_meshes(
   std::vector<topology::face_t> map_faces;
   for (uint32_t i = 0; i < map_data->world.brush_count; ++i) {
     const topology::brush_t brush(map_data->world.brushes + i, textures_info);
-    std::vector<topology::face_t> faces = brush.to_faces();
+    const topology::poly_brush_t poly_brush(&brush);
+    std::vector<topology::face_t> faces = poly_brush.to_faces();
 
     for (uint32_t j = 0; j < faces.size(); ++j) {
       auto& face = faces[j];
