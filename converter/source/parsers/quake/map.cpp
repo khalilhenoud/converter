@@ -33,6 +33,7 @@
 #include <loaders/loader_png.h>
 #include <converter/utils.h>
 #include <converter/parsers/quake/topology/brush.h>
+#include <converter/parsers/quake/topology/poly_brush.h>
 #include <converter/parsers/quake/topology/texture_data.h>
 #include <converter/parsers/quake/map.h>
 #include <converter/parsers/quake/bvh_utils.h>

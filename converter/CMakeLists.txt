@@ -15,6 +15,7 @@ add_executable(${PROJECT_NAME}
 				./source/main.cpp
         ./source/parsers/quake/topology/point.cpp
         ./source/parsers/quake/topology/brush.cpp
+        ./source/parsers/quake/topology/poly_brush.cpp
         ./source/parsers/quake/topology/polygon.cpp
         ./source/parsers/quake/string_utils.cpp
         ./source/parsers/quake/bvh_utils.cpp
