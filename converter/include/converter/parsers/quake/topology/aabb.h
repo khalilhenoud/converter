@@ -12,6 +12,7 @@
 
 #include <cmath>
 #include <cassert>
+#include <vector>
 #include <math/c/vector3f.h>
 
 
@@ -99,7 +100,6 @@ public:
     return !(no_intersect_x || no_intersect_y || no_intersect_z);
   }
 
-private:
   point3f min;
   point3f max;
 };

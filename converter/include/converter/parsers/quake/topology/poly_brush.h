@@ -33,6 +33,12 @@ public:
     std::vector<poly_brush_t*>& brushes, 
     const float radius = s_value);
 
+  static
+  void
+  sort_and_weld(
+    std::vector<poly_brush_t>& brushes, 
+    const float radius = s_value);
+
 private:
   std::vector<polygon_t> polygons;
   

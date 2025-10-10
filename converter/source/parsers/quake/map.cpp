@@ -379,10 +379,17 @@ map_to_meshes(
     textures_info[entry.first] = { 
       entry.second.png_data->width, entry.second.png_data->height };
 
-  std::vector<topology::face_t> map_faces;
+  std::vector<topology::poly_brush_t> poly_brushes;
   for (uint32_t i = 0; i < map_data->world.brush_count; ++i) {
     const topology::brush_t brush(map_data->world.brushes + i, textures_info);
-    const topology::poly_brush_t poly_brush(&brush);
+    poly_brushes.emplace_back(&brush);
+  }
+
+  topology::poly_brush_t::sort_and_weld(poly_brushes);
+
+  std::vector<topology::face_t> map_faces;
+  for (uint32_t i = 0; i < poly_brushes.size(); ++i) {
+    const topology::poly_brush_t& poly_brush = poly_brushes[i];
     std::vector<topology::face_t> faces = poly_brush.to_faces();
 
     for (uint32_t j = 0; j < faces.size(); ++j) {
