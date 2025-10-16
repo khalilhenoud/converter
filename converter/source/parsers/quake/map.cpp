@@ -15,6 +15,7 @@
 #include <cstring>
 #include <iostream>
 #include <library/allocator/allocator.h>
+#include <library/containers/cvector.h>
 #include <library/string/cstring.h>
 #include <math/c/vector3f.h>
 #include <math/c/face.h>
@@ -133,63 +134,60 @@ populate_scene(
   const allocator_t* allocator)
 {
   {
-    // setup the scene.
-    scene->texture_repo.count = tex_map.size();
-    scene->texture_repo.textures = 
-      (texture_t*)allocator->mem_cont_alloc(
-        scene->texture_repo.count, sizeof(texture_t));
-
-    // one material per texture.
-    scene->material_repo.count = scene->texture_repo.count;
-    scene->material_repo.materials = 
-      (material_t*)allocator->mem_cont_alloc(
-        scene->material_repo.count, sizeof(material_t));
+    cvector_setup(
+      &scene->texture_repo, 
+      get_type_data(texture_t), 
+      tex_map.size(), allocator);
+    cvector_resize(&scene->texture_repo, tex_map.size());
+    cvector_setup(
+      &scene->material_repo, 
+      get_type_data(material_t), 
+      tex_map.size(), allocator);
+    cvector_resize(&scene->material_repo, tex_map.size());
 
     for (auto& entry : tex_map) {
       uint32_t i = entry.second.index;
-      scene->texture_repo.textures[i].path = cstring_create(
-        entry.second.path.c_str(), allocator);
+      texture_t *texture = cvector_as(&scene->texture_repo, i, texture_t);
+      texture->path = cstring_create(entry.second.path.c_str(), allocator);
       
       {
-        material_def(scene->material_repo.materials + i);
-        scene->material_repo.materials[i].name = cstring_create(
-          NULL, allocator);
-        scene->material_repo.materials[i].opacity = 1.f;
-        scene->material_repo.materials[i].shininess = 1.f;
-        scene->material_repo.materials[i].ambient.data[0] =
-        scene->material_repo.materials[i].ambient.data[1] =
-        scene->material_repo.materials[i].ambient.data[2] = 0.5f;
-        scene->material_repo.materials[i].ambient.data[3] = 1.f;
-        scene->material_repo.materials[i].diffuse.data[0] =
-        scene->material_repo.materials[i].diffuse.data[1] =
-        scene->material_repo.materials[i].diffuse.data[2] = 0.6f;
-        scene->material_repo.materials[i].diffuse.data[3] = 1.f;
-        scene->material_repo.materials[i].specular.data[0] =
-        scene->material_repo.materials[i].specular.data[1] =
-        scene->material_repo.materials[i].specular.data[2] = 0.6f;
-        scene->material_repo.materials[i].specular.data[3] = 1.f;
+        material_t *material = cvector_as(&scene->material_repo, i, material_t);
+        material_def(material);
+        material->name = cstring_create(NULL, allocator);
+        material->opacity = 1.f;
+        material->shininess = 1.f;
+        material->ambient.data[0] =
+        material->ambient.data[1] =
+        material->ambient.data[2] = 0.5f;
+        material->ambient.data[3] = 1.f;
+        material->diffuse.data[0] =
+        material->diffuse.data[1] =
+        material->diffuse.data[2] = 0.6f;
+        material->diffuse.data[3] = 1.f;
+        material->specular.data[0] =
+        material->specular.data[1] =
+        material->specular.data[2] = 0.6f;
+        material->specular.data[3] = 1.f;
         
-        scene->material_repo.materials[i].textures.used = 1;
-        memset(
-          scene->material_repo.materials[i].textures.data, 
-          0, 
-          sizeof(scene->material_repo.materials[i].textures.data));
-        scene->material_repo.materials[i].textures.data->index = i;
+        material->textures.used = 1;
+        memset(material->textures.data, 0, sizeof(material->textures.data));
+        material->textures.data->index = i;
       }
     }
   }
 
   {
     // create as many mesh as there are materials.
-    scene->mesh_repo.count = scene->material_repo.count;
-    scene->mesh_repo.meshes = 
-      (mesh_t*)allocator->mem_cont_alloc(
-        scene->mesh_repo.count,
-        sizeof(mesh_t));
+    cvector_setup(
+      &scene->mesh_repo, 
+      get_type_data(mesh_t), 
+      scene->material_repo.size, 
+      allocator);
+    cvector_resize(&scene->mesh_repo, scene->material_repo.size);
     
     for (auto& entry : tex_map) {
       uint32_t i = entry.second.index;
-      mesh_t *mesh = scene->mesh_repo.meshes + i;
+      mesh_t *mesh = cvector_as(&scene->mesh_repo, i, mesh_t);
       mesh_def(mesh);
 
       // get the faces that share this index texture-material.
@@ -244,60 +242,64 @@ populate_scene(
 
   {
     // 1 model with multiple meshes (unnamed for now), transform to fit our need
-    scene->node_repo.count = 1;
-    scene->node_repo.nodes = (node_t*)allocator->mem_alloc(sizeof(node_t));
-    node_def(scene->node_repo.nodes);
-    scene->node_repo.nodes[0].name = cstring_create(NULL, allocator);
-    scene->node_repo.nodes[0].meshes.count = scene->mesh_repo.count;
-    scene->node_repo.nodes[0].meshes.indices = (uint32_t *)allocator->mem_alloc(
-      sizeof(uint32_t) * scene->mesh_repo.count);
-    for (uint32_t i = 0; i < scene->mesh_repo.count; ++i)
-      scene->node_repo.nodes[0].meshes.indices[i] = i;
-    scene->node_repo.nodes[0].nodes.count = 0;
-    matrix4f_rotation_x(&scene->node_repo.nodes[0].transform, -K_PI/2.f);
+    cvector_setup(&scene->node_repo, get_type_data(node_t), 4, allocator);
+    cvector_resize(&scene->node_repo, 1);
+    node_t *node = cvector_as(&scene->node_repo, 0, node_t);
+    node_def(node);
+    node->name = cstring_create(NULL, allocator);
+    node->meshes.count = scene->mesh_repo.size;
+    node->meshes.indices = (uint32_t *)allocator->mem_alloc(
+      sizeof(uint32_t) * scene->mesh_repo.size);
+    for (uint32_t i = 0; i < scene->mesh_repo.size; ++i)
+      node->meshes.indices[i] = i;
+    node->nodes.count = 0;
+    matrix4f_rotation_x(&node->transform, -K_PI/2.f);
   }
 
   {
     // set the camera
-    scene->camera_repo.count = 1;
-    scene->camera_repo.cameras = 
-      (camera_t*)allocator->mem_alloc(sizeof(camera_t));
-    scene->camera_repo.cameras[0].position.data[0] = 
-    scene->camera_repo.cameras[0].position.data[1] = 
-    scene->camera_repo.cameras[0].position.data[2] = 0.f;
+    cvector_setup(&scene->camera_repo, get_type_data(camera_t), 4, allocator);
+    cvector_resize(&scene->camera_repo, 1);
+    camera_t *camera = cvector_as(&scene->camera_repo, 0, camera_t);
+    camera->position.data[0] = 
+    camera->position.data[1] = 
+    camera->position.data[2] = 0.f;
 
     // transform the camera to y being up.
+    node_t *node = cvector_as(&scene->node_repo, 0, node_t);
     mult_set_m4f_p3f(
-      &scene->node_repo.nodes[0].transform, 
-      &scene->camera_repo.cameras[0].position);
-    scene->camera_repo.cameras[0].lookat_direction.data[0] = 
-    scene->camera_repo.cameras[0].lookat_direction.data[1] = 0.f;
-    scene->camera_repo.cameras[0].lookat_direction.data[2] = -1.f;
-    scene->camera_repo.cameras[0].up_vector.data[0] = 
-    scene->camera_repo.cameras[0].up_vector.data[2] = 0.f;
-    scene->camera_repo.cameras[0].up_vector.data[1] = 1.f;
+      &node->transform, 
+      &camera->position);
+    camera->lookat_direction.data[0] = 
+    camera->lookat_direction.data[1] = 0.f;
+    camera->lookat_direction.data[2] = -1.f;
+    camera->up_vector.data[0] = 
+    camera->up_vector.data[2] = 0.f;
+    camera->up_vector.data[1] = 1.f;
   }
 
   {
     // set the font
-    scene->font_repo.count = 1;
-    scene->font_repo.fonts = (font_t *)allocator->mem_alloc(sizeof(font_t));
-    scene->font_repo.fonts[0].data_file = cstring_create(
-      "\\font\\FontData.csv", allocator);
-    scene->font_repo.fonts[0].image_file = cstring_create(
-      "\\font\\ExportedFont.png", allocator);
+    cvector_setup(&scene->font_repo, get_type_data(font_t), 4, allocator);
+    cvector_resize(&scene->font_repo, 1);
+    font_t *font = cvector_as(&scene->font_repo, 0, font_t);
+    font->data_file = cstring_create("\\font\\FontData.csv", allocator);
+    font->image_file = cstring_create("\\font\\ExportedFont.png", allocator);
   }
 
   {
-    scene->light_repo.count = map_data->lights.count;
-    scene->light_repo.lights = 
-      (light_t*)allocator->mem_cont_alloc(
-        scene->light_repo.count, sizeof(light_t));
+    cvector_setup(
+      &scene->light_repo, 
+      get_type_data(light_t), 
+      map_data->lights.count, 
+      allocator);
+    cvector_resize(&scene->light_repo, map_data->lights.count);
+    node_t *node = cvector_as(&scene->node_repo, 0, node_t);
 
     {
-      for (uint32_t i = 0; i < scene->light_repo.count; ++i) {
+      for (uint32_t i = 0; i < scene->light_repo.size; ++i) {
         loader_map_light_data_t* m_light = map_data->lights.lights + i;
-        light_t* s_light = scene->light_repo.lights + i;
+        light_t* s_light = cvector_as(&scene->light_repo, i, light_t);
         light_def(s_light);
         s_light->name = cstring_create(NULL, allocator);
         s_light->type = LIGHT_TYPE_POINT;
@@ -305,7 +307,7 @@ populate_scene(
         s_light->position.data[1] = (float)m_light->origin[1];
         s_light->position.data[2] = (float)m_light->origin[2];
         mult_set_m4f_p3f(
-          &scene->node_repo.nodes[0].transform, 
+          &node->transform, 
           &s_light->position);
         s_light->attenuation_constant = 1.f;
         s_light->attenuation_linear = 0.01f;
@@ -333,26 +335,26 @@ populate_scene(
     scene->metadata.player_start.data[2] = (float)map_data->player_start[2];
     scene->metadata.player_angle = (float)map_data->player_angle;
 
+    node_t *node = cvector_as(&scene->node_repo, 0, node_t);
     // transform the start_position, is this required?
     mult_set_m4f_p3f(
-      &scene->node_repo.nodes[0].transform, 
+      &node->transform, 
       &scene->metadata.player_start);
   }
 
   {
     // for now limit it to 1.
-    scene->bvh_repo.count = 1;
-    scene->bvh_repo.bvhs = 
-      (bvh_t*)allocator->mem_cont_alloc(scene->bvh_repo.count, sizeof(bvh_t));
-
-    bvh_t* bvh = create_bvh_from_scene(scene, allocator);
+    cvector_setup(&scene->bvh_repo, get_type_data(bvh_t), 4, allocator);
+    cvector_resize(&scene->bvh_repo, 1);
+    bvh_t *target = cvector_as(&scene->bvh_repo, 0, bvh_t);
+    bvh_t *bvh = create_bvh_from_scene(scene, allocator);
     // the types are binary compatible.
-    scene->bvh_repo.bvhs[0].bounds = bvh->bounds;
-    scene->bvh_repo.bvhs[0].count = bvh->count;
-    scene->bvh_repo.bvhs[0].faces = bvh->faces;
-    scene->bvh_repo.bvhs[0].normals = bvh->normals;
-    scene->bvh_repo.bvhs[0].nodes = bvh->nodes;
-    scene->bvh_repo.bvhs[0].nodes_used = bvh->nodes_used;
+    target->bounds = bvh->bounds;
+    target->count = bvh->count;
+    target->faces = bvh->faces;
+    target->normals = bvh->normals;
+    target->nodes = bvh->nodes;
+    target->nodes_used = bvh->nodes_used;
 
     // the pointers have been moved
     bvh->bounds = NULL;

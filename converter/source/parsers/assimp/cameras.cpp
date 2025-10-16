@@ -14,6 +14,7 @@
 #include <assimp/camera.h>
 #include <assimp/types.h>
 #include <library/allocator/allocator.h>
+#include <library/containers/cvector.h>
 #include <library/string/cstring.h>
 #include <entity/c/scene/camera.h>
 #include <entity/c/scene/scene.h>
@@ -27,13 +28,12 @@ populate_cameras(
   const aiScene *pScene, 
   const allocator_t *allocator)
 {
-  scene->camera_repo.count = pScene->mNumCameras;
-  scene->camera_repo.cameras = (camera_t*)allocator->mem_cont_alloc(
-    sizeof(camera_t), scene->camera_repo.count);
+  cvector_setup(&scene->camera_repo, get_type_data(camera_t), 4, allocator);
+  cvector_resize(&scene->camera_repo, pScene->mNumCameras);
 
-  for (uint32_t i = 0; i < scene->camera_repo.count; ++i) {
-    camera_t *camera = scene->camera_repo.cameras + i;
-    aiCamera* pCamera = pScene->mCameras[i];
+  for (uint32_t i = 0; i < scene->camera_repo.size; ++i) {
+    camera_t *camera = cvector_as(&scene->camera_repo, i, camera_t);
+    aiCamera *pCamera = pScene->mCameras[i];
 
     aiQuaternion rotation;
     aiVector3D position;

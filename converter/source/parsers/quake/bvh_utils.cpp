@@ -31,7 +31,7 @@ build_bvh_node_mesh_transformed_data(
   uint32_t* data_index,
   const allocator_t* allocator)
 {
-  mesh_t* mesh = scene->mesh_repo.meshes + mesh_index;
+  mesh_t* mesh = cvector_as(&scene->mesh_repo, mesh_index, mesh_t);
   // we need to allocate the vertices since they are transformed.
   float* ws_vertices = (float*)allocator->mem_cont_alloc(
     mesh->vertices_count * 3, sizeof(float));
@@ -73,7 +73,8 @@ build_bvh_node_transformed_data(
     // populate the transformed mesh data.
     for (uint32_t i = 0; i < node->meshes.count; ) {
       uint32_t mesh_index = node->meshes.indices[i];
-      if (scene->mesh_repo.meshes[mesh_index].indices_count) {
+      mesh_t *tmp = cvector_as(&scene->mesh_repo, mesh_index, mesh_t);
+      if (tmp->indices_count) {
         build_bvh_node_mesh_transformed_data(
           scene,
           mesh_index,
@@ -87,11 +88,11 @@ build_bvh_node_transformed_data(
     for (uint32_t i = 0; i < node->nodes.count; ++i) {
       uint32_t node_index = node->nodes.indices[i];
       matrix4f concat_transform = transform;
-      concat_transform = mult_m4f(
-        &transform, &scene->node_repo.nodes[node_index].transform);
+      node_t *node = cvector_as(&scene->node_repo, node_index, node_t);
+      concat_transform = mult_m4f(&transform, &node->transform);
       build_bvh_node_transformed_data(
         scene,
-        scene->node_repo.nodes + node_index,
+        node,
         concat_transform,
         vertices, indices, indices_count, data_index, allocator); 
     }
@@ -108,14 +109,15 @@ build_bvh_transformed_data(
   const allocator_t* allocator)
 {
   assert(scene && vertices && indices && indices_count && allocator);
-  assert(scene->node_repo.count && "at least the root node needs to exist!");
+  assert(scene->node_repo.size && "at least the root node needs to exist!");
 
   {
     uint32_t data_index = 0;
+    node_t *node = cvector_as(&scene->node_repo, 0, node_t);
     build_bvh_node_transformed_data(
       scene, 
-      scene->node_repo.nodes, 
-      scene->node_repo.nodes[0].transform,
+      node, 
+      node->transform,
       vertices, indices, indices_count, &data_index, allocator);
   }
 }
@@ -132,8 +134,9 @@ create_bvh_from_scene(
   uint32_t* indices_count = NULL;
   uint32_t mesh_count = 0;
 
-  for (uint32_t i = 0; i < scene->mesh_repo.count; ++i) {
-    if (scene->mesh_repo.meshes[i].indices_count)
+  for (uint32_t i = 0; i < scene->mesh_repo.size; ++i) {
+    mesh_t *mesh = cvector_as(&scene->mesh_repo, i, mesh_t);
+    if (mesh->indices_count)
       ++mesh_count;
   }
 

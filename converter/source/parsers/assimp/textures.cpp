@@ -12,6 +12,7 @@
 #include <assimp/types.h>
 #include <assimp/material.h>
 #include <library/allocator/allocator.h>
+#include <library/containers/cvector.h>
 #include <library/string/cstring.h>
 #include <entity/c/mesh/texture.h>
 #include <entity/c/scene/scene.h>
@@ -26,16 +27,17 @@ populate_textures(
   std::vector<std::string> textures)
 {
   // adding the textures
-  scene->texture_repo.count = (uint32_t)textures.size();
-  if (scene->texture_repo.count) {
-    scene->texture_repo.textures = (texture_t*)allocator->mem_cont_alloc(
-      sizeof(texture_t), scene->texture_repo.count);
+  cvector_def(&scene->texture_repo);
 
-    for (uint32_t i = 0; i < scene->texture_repo.count; ++i) {
+  if (textures.size()) {
+    cvector_setup(&scene->texture_repo, get_type_data(texture_t), 4, allocator);
+    cvector_resize(&scene->texture_repo, textures.size());
+
+    for (uint32_t i = 0; i < scene->texture_repo.size; ++i) {
       // only keep the file name.
       textures[i] = textures[i].substr(textures[i].find_last_of("/\\") + 1);
-      scene->texture_repo.textures[i].path = cstring_create(
-        textures[i].c_str(), allocator);
+      texture_t *texture = cvector_as(&scene->texture_repo, i, texture_t);
+      texture->path = cstring_create(textures[i].c_str(), allocator);
     }
   }
 }

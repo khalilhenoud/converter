@@ -14,6 +14,7 @@
 #include <assimp/camera.h>
 #include <assimp/types.h>
 #include <library/allocator/allocator.h>
+#include <library/containers/cvector.h>
 #include <library/string/cstring.h>
 #include <entity/c/spatial/bvh.h>
 #include <entity/c/scene/scene.h>
@@ -27,18 +28,18 @@ populate_bvhs(
   const allocator_t *allocator)
 {
   // for now limit it to 1.
-  scene->bvh_repo.count = 1;
-  scene->bvh_repo.bvhs = 
-    (bvh_t*)allocator->mem_cont_alloc(scene->bvh_repo.count, sizeof(bvh_t));
+  cvector_setup(&scene->bvh_repo, get_type_data(bvh_t), 4, allocator);
+  cvector_resize(&scene->bvh_repo, 1);
+  bvh_t *target = cvector_as(&scene->bvh_repo, 0, bvh_t);
 
-  bvh_t* bvh = create_bvh_from_scene(scene, allocator);
+  bvh_t *bvh = create_bvh_from_scene(scene, allocator);
   // the types are binary compatible.
-  scene->bvh_repo.bvhs[0].bounds = bvh->bounds;
-  scene->bvh_repo.bvhs[0].count = bvh->count;
-  scene->bvh_repo.bvhs[0].faces = bvh->faces;
-  scene->bvh_repo.bvhs[0].normals = bvh->normals;
-  scene->bvh_repo.bvhs[0].nodes = bvh->nodes;
-  scene->bvh_repo.bvhs[0].nodes_used = bvh->nodes_used;
+  target->bounds = bvh->bounds;
+  target->count = bvh->count;
+  target->faces = bvh->faces;
+  target->normals = bvh->normals;
+  target->nodes = bvh->nodes;
+  target->nodes_used = bvh->nodes_used;
 
   // the pointers have been moved
   bvh->bounds = NULL;

@@ -13,6 +13,7 @@
 #include <assimp/scene.h>
 #include <assimp/types.h>
 #include <library/allocator/allocator.h>
+#include <library/containers/cvector.h>
 #include <library/string/cstring.h>
 #include <entity/c/scene/light.h>
 #include <entity/c/scene/scene.h>
@@ -26,13 +27,12 @@ populate_lights(
   const aiScene* pScene, 
   const allocator_t* allocator)
 {
-  scene->light_repo.count = pScene->mNumLights;
-  scene->light_repo.lights = (light_t*)allocator->mem_cont_alloc(
-    sizeof(light_t), scene->light_repo.count);
+  cvector_setup(&scene->light_repo, get_type_data(light_t), 1, allocator);
+  cvector_resize(&scene->light_repo, pScene->mNumLights);
 
-  for (uint32_t i = 0; i < scene->light_repo.count; ++i) {
-    light_t *light = scene->light_repo.lights + i;
-    aiLight* pLight = pScene->mLights[i];
+  for (uint32_t i = 0; i < scene->light_repo.size; ++i) {
+    light_t *light = cvector_as(&scene->light_repo, i, light_t);
+    aiLight *pLight = pScene->mLights[i];
 
     aiQuaternion rotation;
     aiVector3D position;

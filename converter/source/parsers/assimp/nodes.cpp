@@ -14,6 +14,7 @@
 #include <assimp/material.h>
 #include <assimp/scene.h>
 #include <library/allocator/allocator.h>
+#include <library/containers/cvector.h>
 #include <library/string/cstring.h>
 #include <entity/c/scene/node.h>
 #include <entity/c/scene/scene.h>
@@ -72,17 +73,18 @@ populate_nodes(
       target->nodes.indices = (uint32_t*)allocator->mem_cont_alloc(
         target->nodes.count, sizeof(uint32_t));
       for (uint32_t i = 0; i < source->mNumChildren; ++i) {
-        aiNode* child = source->mChildren[i];
-        node_t* child_target = scene->node_repo.nodes + model_index;
+        aiNode *child = source->mChildren[i];
+        node_t *child_target = cvector_as(
+          &scene->node_repo, model_index, node_t);
         target->nodes.indices[i] = model_index;
         populate_node(model_index, child_target, child);
       }
     }
   };
 
-  scene->node_repo.count = count_nodes(pScene->mRootNode) + 1;
-  scene->node_repo.nodes = (node_t *)allocator->mem_cont_alloc(
-    sizeof(node_t), scene->node_repo.count);
+  cvector_setup(&scene->node_repo, get_type_data(node_t), 4, allocator);
+  cvector_resize(&scene->node_repo, count_nodes(pScene->mRootNode) + 1);
   uint32_t start = 0;
-  populate_node(start, scene->node_repo.nodes, pScene->mRootNode);
+  node_t *first = cvector_as(&scene->node_repo, 0, node_t);
+  populate_node(start, first, pScene->mRootNode);
 }

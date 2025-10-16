@@ -14,6 +14,7 @@
 #include <assimp/material.h>
 #include <assimp/scene.h>
 #include <library/allocator/allocator.h>
+#include <library/containers/cvector.h>
 #include <library/string/cstring.h>
 #include <entity/c/mesh/mesh.h>
 #include <entity/c/scene/scene.h>
@@ -27,18 +28,17 @@ populate_meshes(
   const aiScene *pScene, 
   const allocator_t *allocator)
 {
-  scene->mesh_repo.count = pScene->mNumMeshes;
-  scene->mesh_repo.meshes = (mesh_t *)allocator->mem_cont_alloc(
-    sizeof(mesh_t), scene->mesh_repo.count);
+  cvector_setup(&scene->mesh_repo, get_type_data(mesh_t), 4, allocator);
+  cvector_resize(&scene->mesh_repo, pScene->mNumMeshes);
   
   // NOTE: Currently assimp will decompose the mesh if it contains more than
   // one material, so basically a single material is specified. The rest of
   // the materials can be found on identically named meshes. 
   // Additionally no transform is assigned to the mesh, instead it uses the
   // transform attached to the parent node.
-  for (uint32_t i = 0; i < scene->mesh_repo.count; ++i) {
-    mesh_t *mesh = scene->mesh_repo.meshes + i;
-    aiMesh* pMesh = pScene->mMeshes[i];
+  for (uint32_t i = 0; i < scene->mesh_repo.size; ++i) {
+    mesh_t *mesh = cvector_as(&scene->mesh_repo, i, mesh_t);
+    aiMesh *pMesh = pScene->mMeshes[i];
 
     mesh->materials.used = pScene->mNumMaterials == 0 ? 0 : 1;
     mesh->materials.indices[0] = pMesh->mMaterialIndex;

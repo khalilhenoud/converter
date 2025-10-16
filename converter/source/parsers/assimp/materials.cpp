@@ -14,6 +14,7 @@
 #include <assimp/types.h>
 #include <assimp/material.h>
 #include <library/allocator/allocator.h>
+#include <library/containers/cvector.h>
 #include <library/string/cstring.h>
 #include <entity/c/mesh/color.h>
 #include <entity/c/mesh/texture.h>
@@ -33,13 +34,12 @@ populate_materials(
 
   // NOTE: if pScene AI_SCENE_FLAGS_INCOMPLETE is set pScene might have no
   // materials.
-  scene->material_repo.count = pScene->mNumMaterials;
-  scene->material_repo.materials = (material_t*)allocator->mem_cont_alloc(
-    sizeof(material_t), scene->material_repo.count);
+  cvector_setup(&scene->material_repo, get_type_data(material_t), 4, allocator);
+  cvector_resize(&scene->material_repo, pScene->mNumMaterials);
 
-  for (uint32_t i = 0; i < scene->material_repo.count; ++i) {
-    auto* material = scene->material_repo.materials + i;
-    aiMaterial* pMaterial = pScene->mMaterials[i];
+  for (uint32_t i = 0; i < scene->material_repo.size; ++i) {
+    material_t *material = cvector_as(&scene->material_repo, i, material_t);
+    aiMaterial *pMaterial = pScene->mMaterials[i];
     
     aiColor4D color;
     aiReturn value;
