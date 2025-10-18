@@ -347,21 +347,13 @@ populate_scene(
     cvector_setup(&scene->bvh_repo, get_type_data(bvh_t), 4, allocator);
     cvector_resize(&scene->bvh_repo, 1);
     bvh_t *target = cvector_as(&scene->bvh_repo, 0, bvh_t);
+    bvh_def(target);
     bvh_t *bvh = create_bvh_from_scene(scene, allocator);
     // the types are binary compatible.
-    target->bounds = bvh->bounds;
-    target->count = bvh->count;
-    target->faces = bvh->faces;
-    target->normals = bvh->normals;
-    target->nodes = bvh->nodes;
-    target->nodes_used = bvh->nodes_used;
-
-    // the pointers have been moved
-    bvh->bounds = NULL;
-    bvh->faces = NULL;
-    bvh->normals = NULL;
-    bvh->nodes = NULL;
-    bvh->nodes_used = bvh->count = 0;
+    cvector_fullswap(&bvh->normals, &target->normals);
+    cvector_fullswap(&bvh->faces, &target->faces);
+    cvector_fullswap(&bvh->bounds, &target->bounds);
+    cvector_fullswap(&bvh->nodes, &target->nodes);
     allocator->mem_free(bvh);
   }
 }
