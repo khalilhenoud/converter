@@ -59,7 +59,8 @@ populate_materials(
     aiString data_str;
     value = aiGetMaterialString(pMaterial, AI_MATKEY_NAME, &data_str);
     assert(value == AI_SUCCESS);
-    material->name = cstring_create(data_str.C_Str(), allocator);
+    cstring_def(&material->name);
+    cstring_setup(&material->name, data_str.C_Str(), allocator);
 
     // Read the number of textures used by this material, stop at 8 (this is
     // max supported).

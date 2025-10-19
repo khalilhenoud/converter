@@ -37,7 +37,8 @@ populate_textures(
       // only keep the file name.
       textures[i] = textures[i].substr(textures[i].find_last_of("/\\") + 1);
       texture_t *texture = cvector_as(&scene->texture_repo, i, texture_t);
-      texture->path = cstring_create(textures[i].c_str(), allocator);
+      cstring_def(&texture->path);
+      cstring_setup(&texture->path, textures[i].c_str(), allocator);
     }
   }
 }

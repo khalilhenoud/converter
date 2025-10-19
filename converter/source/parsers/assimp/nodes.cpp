@@ -54,7 +54,8 @@ populate_nodes(
       transform.d1, transform.d2, transform.d3, transform.d4};
     memcpy(target->transform.data, data, sizeof(float) * 16);
 
-    target->name = cstring_create(source->mName.C_Str(), allocator);
+    cstring_def(&target->name);
+    cstring_setup(&target->name, source->mName.C_Str(), allocator);
 
     target->meshes.count = source->mNumMeshes;
     target->meshes.indices = NULL;

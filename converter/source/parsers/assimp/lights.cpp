@@ -14,7 +14,6 @@
 #include <assimp/types.h>
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
-#include <library/string/cstring.h>
 #include <entity/c/scene/light.h>
 #include <entity/c/scene/scene.h>
 #include <converter/utils.h>
@@ -46,7 +45,8 @@ populate_lights(
     else
       assert(0);
 
-    light->name = cstring_create(pLight->mName.C_Str(), allocator);
+    cstring_def(&light->name);
+    cstring_setup(&light->name, pLight->mName.C_Str(), allocator);
     copy_vec3(&light->position, &position, AI_SUCCESS);
     copy_vec3(&light->direction, &direction, AI_SUCCESS);
     copy_vec3(&light->up, &up, AI_SUCCESS);
