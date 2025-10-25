@@ -247,12 +247,11 @@ populate_scene(
     node_def(node);
     cstring_def(&node->name);
     cstring_setup(&node->name, "", allocator);
-    node->meshes.count = scene->mesh_repo.size;
-    node->meshes.indices = (uint32_t *)allocator->mem_alloc(
-      sizeof(uint32_t) * scene->mesh_repo.size);
+    cvector_setup(&node->meshes, get_type_data(uint32_t), 0, allocator);
+    cvector_resize(&node->meshes, scene->mesh_repo.size);
     for (uint32_t i = 0; i < scene->mesh_repo.size; ++i)
-      node->meshes.indices[i] = i;
-    node->nodes.count = 0;
+      *cvector_as(&node->meshes, i, uint32_t) = i;
+    cvector_setup(&node->nodes, get_type_data(uint32_t), 0, allocator);
     matrix4f_rotation_x(&node->transform, -K_PI/2.f);
   }
 

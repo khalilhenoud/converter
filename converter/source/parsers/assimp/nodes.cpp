@@ -56,28 +56,21 @@ populate_nodes(
 
     cstring_def(&target->name);
     cstring_setup(&target->name, source->mName.C_Str(), allocator);
+    cvector_setup(&target->meshes, get_type_data(uint32_t), 0, allocator);
+    cvector_resize(&target->meshes, source->mNumMeshes);
 
-    target->meshes.count = source->mNumMeshes;
-    target->meshes.indices = NULL;
-    if (target->meshes.count) {
-      target->meshes.indices = (uint32_t*)allocator->mem_cont_alloc(
-        target->meshes.count, sizeof(uint32_t));
-      memcpy(
-        target->meshes.indices,
-        source->mMeshes,
+    if (source->mNumMeshes)
+      memcpy(target->meshes.data, source->mMeshes,
         sizeof(uint32_t) * source->mNumMeshes);
-    }
     
-    target->nodes.count = source->mNumChildren;
-    target->nodes.indices = NULL;
-    if (target->nodes.count) {
-      target->nodes.indices = (uint32_t*)allocator->mem_cont_alloc(
-        target->nodes.count, sizeof(uint32_t));
+    cvector_setup(&target->nodes, get_type_data(uint32_t), 0, allocator);
+    cvector_resize(&target->nodes, source->mNumChildren);
+    if (source->mNumChildren) {
       for (uint32_t i = 0; i < source->mNumChildren; ++i) {
         aiNode *child = source->mChildren[i];
         node_t *child_target = cvector_as(
           &scene->node_repo, model_index, node_t);
-        target->nodes.indices[i] = model_index;
+        *cvector_as(&target->nodes, i, uint32_t) = model_index;
         populate_node(model_index, child_target, child);
       }
     }

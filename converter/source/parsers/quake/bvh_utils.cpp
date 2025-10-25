@@ -71,8 +71,8 @@ build_bvh_node_transformed_data(
 {
   {
     // populate the transformed mesh data.
-    for (uint32_t i = 0; i < node->meshes.count; ) {
-      uint32_t mesh_index = node->meshes.indices[i];
+    for (uint32_t i = 0; i < node->meshes.size; ) {
+      uint32_t mesh_index = *cvector_as(&node->meshes, i, uint32_t);
       mesh_t *tmp = cvector_as(&scene->mesh_repo, mesh_index, mesh_t);
       if (tmp->indices.size) {
         build_bvh_node_mesh_transformed_data(
@@ -85,8 +85,8 @@ build_bvh_node_transformed_data(
     }
 
     // recurively call the child nodes, after concatenating the transform.
-    for (uint32_t i = 0; i < node->nodes.count; ++i) {
-      uint32_t node_index = node->nodes.indices[i];
+    for (uint32_t i = 0; i < node->nodes.size; ++i) {
+      uint32_t node_index = *cvector_as(&node->nodes, i, uint32_t);
       matrix4f concat_transform = transform;
       node_t *node = cvector_as(&scene->node_repo, node_index, node_t);
       concat_transform = mult_m4f(&transform, &node->transform);
