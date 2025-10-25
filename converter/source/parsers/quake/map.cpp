@@ -197,44 +197,41 @@ populate_scene(
       uint32_t face_count = face_indices.size();
       uint32_t vertices_count = face_count * 3;
       uint32_t sizef3 = sizeof(float) * 3;
-      
-      mesh->vertices_count = vertices_count;
-      mesh->vertices = NULL;
-      mesh->normals = NULL;
-      mesh->uvs = NULL;
-      if (mesh->vertices_count) {
-        mesh->vertices = (float*)allocator->mem_alloc(sizef3 * vertices_count);
-        mesh->normals = (float*)allocator->mem_alloc(sizef3 * vertices_count);
-        mesh->uvs = (float*)allocator->mem_alloc(sizef3 * vertices_count);
-        memset(mesh->uvs, 0, sizef3 * vertices_count);
-      }
-
-      mesh->indices_count = face_count * 3;
-      if (vertices_count) {
-        mesh->indices = (uint32_t*)allocator->mem_alloc(
-          sizeof(uint32_t) * vertices_count);
-      }
+    
+      cvector_setup(&mesh->vertices, get_type_data(float), 0, allocator);
+      cvector_resize(&mesh->vertices, vertices_count * 3);
+      cvector_setup(&mesh->normals, get_type_data(float), 0, allocator);
+      cvector_resize(&mesh->normals, vertices_count * 3);
+      cvector_setup(&mesh->uvs, get_type_data(float), 0, allocator);
+      cvector_resize(&mesh->uvs, vertices_count * 3);
+      memset(mesh->uvs.data, 0, sizeof(float) * vertices_count * 3);
+      cvector_setup(&mesh->indices, get_type_data(uint32_t), 0, allocator);
+      cvector_resize(&mesh->indices, vertices_count);
       mesh->materials.used = 1;
       mesh->materials.indices[0] = i;
 
       // copy the data into the mesh.
       uint32_t verti = 0, indexi = 0;
+      float *vertices = (float *)mesh->vertices.data;
+      float *normals = (float *)mesh->normals.data;
+      float *uvs = (float *)mesh->uvs.data;
+      uint32_t *indices = (uint32_t *)mesh->indices.data;
       for (uint32_t k = 0; k < face_count; ++k) {
         auto& face = map_faces[face_indices[k]];
         point3f* points = face.face.points;
-        memcpy(mesh->vertices + (verti + 0) * 3, points[0].data, sizef3);
-        memcpy(mesh->vertices + (verti + 1) * 3, points[1].data, sizef3);
-        memcpy(mesh->vertices + (verti + 2) * 3, points[2].data, sizef3);
-        memcpy(mesh->normals + (verti + 0) * 3, face.normal.data, sizef3);
-        memcpy(mesh->normals + (verti + 1) * 3, face.normal.data, sizef3);
-        memcpy(mesh->normals + (verti + 2) * 3, face.normal.data, sizef3);
-        memcpy(mesh->uvs + (verti + 0) * 3, face.uv[0].data, sizef3);
-        memcpy(mesh->uvs + (verti + 1) * 3, face.uv[1].data, sizef3);
-        memcpy(mesh->uvs + (verti + 2) * 3, face.uv[2].data, sizef3);
+        memcpy(vertices + (verti + 0) * 3, points[0].data, sizef3);
+        memcpy(vertices + (verti + 1) * 3, points[1].data, sizef3);
+        memcpy(vertices + (verti + 2) * 3, points[2].data, sizef3);
+        memcpy(normals + (verti + 0) * 3, face.normal.data, sizef3);
+        memcpy(normals + (verti + 1) * 3, face.normal.data, sizef3);
+        memcpy(normals + (verti + 2) * 3, face.normal.data, sizef3);
+        memcpy(uvs + (verti + 0) * 3, face.uv[0].data, sizef3);
+        memcpy(uvs + (verti + 1) * 3, face.uv[1].data, sizef3);
+        memcpy(uvs + (verti + 2) * 3, face.uv[2].data, sizef3);
 
-        mesh->indices[indexi + 0] = verti + 0;
-        mesh->indices[indexi + 1] = verti + 1;
-        mesh->indices[indexi + 2] = verti + 2;
+        indices[indexi + 0] = verti + 0;
+        indices[indexi + 1] = verti + 1;
+        indices[indexi + 2] = verti + 2;
 
         indexi += 3;
         verti += 3;

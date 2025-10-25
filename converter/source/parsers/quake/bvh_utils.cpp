@@ -34,9 +34,9 @@ build_bvh_node_mesh_transformed_data(
   mesh_t* mesh = cvector_as(&scene->mesh_repo, mesh_index, mesh_t);
   // we need to allocate the vertices since they are transformed.
   float* ws_vertices = (float*)allocator->mem_cont_alloc(
-    mesh->vertices_count * 3, sizeof(float));
-  memcpy(ws_vertices, mesh->vertices, mesh->vertices_count * 3 * sizeof(float));
-  for (uint32_t i = 0; i < mesh->vertices_count; ++i) {
+    mesh->vertices.size, sizeof(float));
+  memcpy(ws_vertices, mesh->vertices.data, mesh->vertices.size * sizeof(float));
+  for (uint32_t i = 0; i < (mesh->vertices.size / 3); ++i) {
 #if OPTIMIZE_UNSAFE
     mult_set_m4f_p3f(transform, (point3f*)&ws_vertices[i * 3]);
 #else
@@ -52,8 +52,8 @@ build_bvh_node_mesh_transformed_data(
   }
 
   vertices[*data_index] = ws_vertices;
-  indices[*data_index] = mesh->indices;
-  indices_count[*data_index] = mesh->indices_count;
+  indices[*data_index] = (uint32_t *)mesh->indices.data;
+  indices_count[*data_index] = mesh->indices.size;
   ++*data_index;
 }
 
@@ -74,7 +74,7 @@ build_bvh_node_transformed_data(
     for (uint32_t i = 0; i < node->meshes.count; ) {
       uint32_t mesh_index = node->meshes.indices[i];
       mesh_t *tmp = cvector_as(&scene->mesh_repo, mesh_index, mesh_t);
-      if (tmp->indices_count) {
+      if (tmp->indices.size) {
         build_bvh_node_mesh_transformed_data(
           scene,
           mesh_index,
@@ -136,7 +136,7 @@ create_bvh_from_scene(
 
   for (uint32_t i = 0; i < scene->mesh_repo.size; ++i) {
     mesh_t *mesh = cvector_as(&scene->mesh_repo, i, mesh_t);
-    if (mesh->indices_count)
+    if (mesh->indices.size)
       ++mesh_count;
   }
 
