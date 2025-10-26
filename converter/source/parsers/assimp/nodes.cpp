@@ -54,7 +54,6 @@ populate_nodes(
       transform.d1, transform.d2, transform.d3, transform.d4};
     memcpy(target->transform.data, data, sizeof(float) * 16);
 
-    cstring_def(&target->name);
     cstring_setup(&target->name, source->mName.C_Str(), allocator);
     cvector_setup(&target->meshes, get_type_data(uint32_t), 0, allocator);
     cvector_resize(&target->meshes, source->mNumMeshes);

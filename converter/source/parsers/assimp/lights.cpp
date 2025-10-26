@@ -45,7 +45,6 @@ populate_lights(
     else
       assert(0);
 
-    cstring_def(&light->name);
     cstring_setup(&light->name, pLight->mName.C_Str(), allocator);
     copy_vec3(&light->position, &position, AI_SUCCESS);
     copy_vec3(&light->direction, &direction, AI_SUCCESS);

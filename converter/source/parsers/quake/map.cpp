@@ -148,13 +148,11 @@ populate_scene(
     for (auto& entry : tex_map) {
       uint32_t i = entry.second.index;
       texture_t *texture = cvector_as(&scene->texture_repo, i, texture_t);
-      cstring_def(&texture->path);
       cstring_setup(&texture->path, entry.second.path.c_str(), allocator);
       
       {
         material_t *material = cvector_as(&scene->material_repo, i, material_t);
         material_def(material);
-        cstring_def(&material->name);
         cstring_setup(&material->name, "", allocator);
         material->opacity = 1.f;
         material->shininess = 1.f;
@@ -245,7 +243,6 @@ populate_scene(
     cvector_resize(&scene->node_repo, 1);
     node_t *node = cvector_as(&scene->node_repo, 0, node_t);
     node_def(node);
-    cstring_def(&node->name);
     cstring_setup(&node->name, "", allocator);
     cvector_setup(&node->meshes, get_type_data(uint32_t), 0, allocator);
     cvector_resize(&node->meshes, scene->mesh_repo.size);
@@ -282,9 +279,7 @@ populate_scene(
     cvector_setup(&scene->font_repo, get_type_data(font_t), 4, allocator);
     cvector_resize(&scene->font_repo, 1);
     font_t *font = cvector_as(&scene->font_repo, 0, font_t);
-    cstring_def(&font->data_file);
     cstring_setup(&font->data_file, "\\font\\FontData.csv", allocator);
-    cstring_def(&font->image_file);
     cstring_setup(&font->image_file, "\\font\\ExportedFont.png", allocator);
   }
 
@@ -302,7 +297,6 @@ populate_scene(
         loader_map_light_data_t* m_light = map_data->lights.lights + i;
         light_t* s_light = cvector_as(&scene->light_repo, i, light_t);
         light_def(s_light);
-        cstring_def(&s_light->name);
         cstring_setup(&s_light->name, "", allocator);
         s_light->type = LIGHT_TYPE_POINT;
         s_light->position.data[0] = (float)m_light->origin[0];

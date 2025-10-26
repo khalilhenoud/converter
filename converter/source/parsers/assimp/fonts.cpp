@@ -26,8 +26,6 @@ populate_default_font(
   cvector_setup(&scene->font_repo, get_type_data(font_t), 4, allocator);
   cvector_resize(&scene->font_repo, 1);
   font_t *font = cvector_as(&scene->font_repo, 0, font_t);
-  cstring_def(&font->data_file);
   cstring_setup(&font->data_file, "\\font\\FontData.csv", allocator);
-  cstring_def(&font->image_file);
   cstring_setup(&font->image_file, "\\font\\ExportedFont.png", allocator);
 }
