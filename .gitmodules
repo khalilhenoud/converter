@@ -13,3 +13,6 @@
 [submodule "external/entity"]
 	path = external/entity
 	url = https://github.com/khalilhenoud/entity.git
+[submodule "external/collision"]
+	path = external/collision
+	url = https://github.com/khalilhenoud/collision.git
