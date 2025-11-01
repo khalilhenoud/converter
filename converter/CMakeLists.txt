@@ -33,6 +33,7 @@ add_executable(${PROJECT_NAME}
 				)
 			
 target_link_libraries(${PROJECT_NAME}
+        PRIVATE collision
         PRIVATE assimp
         PRIVATE loaders
         PRIVATE entity

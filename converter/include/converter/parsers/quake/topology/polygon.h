@@ -16,7 +16,7 @@
 #include <converter/parsers/quake/topology/texture_data.h>
 #include <converter/parsers/quake/topology/edge.h>
 #include <math/c/vector3f.h>
-#include <math/c/face.h>
+#include <collision/face.h>
 
 
 namespace topology {

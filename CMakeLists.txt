@@ -29,6 +29,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 endif()
 
 add_subdirectory(external/math math)
+add_subdirectory(external/collision collision)
 add_subdirectory(external/library library)
 add_subdirectory(external/assimp assimp)
 add_subdirectory(external/entity entity)
