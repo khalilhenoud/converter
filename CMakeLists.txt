@@ -19,7 +19,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 	option(GIT_SUBMODULE "Check submodules during build" ON)
 	if(GIT_SUBMODULES)
 		message(STATUS "Submodule update")
-		execute_process(COMMAND $(GIT_EXECUTABLE) submodule upate --init --recursive 
+		execute_process(COMMAND $(GIT_EXECUTABLE) submodule update --init --recursive 
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 		RESULT_VARIABLE GIT_SUBMOD_RESULT)
 		if(NOT GIT_SUBMOD_RESULT EQUAL "0")
@@ -30,7 +30,6 @@ endif()
 
 add_subdirectory(external/math math)
 add_subdirectory(external/library library)
-add_subdirectory(external/serializer serializer)
 add_subdirectory(external/assimp assimp)
 add_subdirectory(external/entity entity)
 add_subdirectory(external/loaders loaders)
