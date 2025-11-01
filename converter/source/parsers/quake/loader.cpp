@@ -15,7 +15,7 @@
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
 #include <library/streams/binary_stream.h>
-#include <serializer/utils.h>
+#include <library/filesystem/io.h>
 #include <converter/parsers/quake/loader.h>
 #include <converter/parsers/quake/map.h>
 #include <converter/utils.h>

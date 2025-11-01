@@ -33,7 +33,6 @@ add_executable(${PROJECT_NAME}
 				)
 			
 target_link_libraries(${PROJECT_NAME}
-				PRIVATE serializer
         PRIVATE assimp
         PRIVATE loaders
         PRIVATE entity

@@ -1,6 +1,3 @@
-[submodule "external/serializer"]
-	path = external/serializer
-	url = https://github.com/khalilhenoud/serializer.git
 [submodule "external/assimp"]
 	path = external/assimp
 	url = https://github.com/assimp/assimp.git
