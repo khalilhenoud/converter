@@ -1,20 +1,20 @@
 /**
  * @file bvh_utils.c
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-12-20
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include <assert.h>
 #include <library/allocator/allocator.h>
 #include <converter/parsers/quake/bvh_utils.h>
-#include <entity/c/spatial/bvh.h>
-#include <entity/c/mesh/mesh.h>
-#include <entity/c/scene/node.h>
-#include <entity/c/scene/scene.h>
+#include <entity/spatial/bvh.h>
+#include <entity/mesh/mesh.h>
+#include <entity/scene/node.h>
+#include <entity/scene/scene.h>
 
 #define OPTIMIZE_UNSAFE 0
 
@@ -94,7 +94,7 @@ build_bvh_node_transformed_data(
         scene,
         node,
         concat_transform,
-        vertices, indices, indices_count, data_index, allocator); 
+        vertices, indices, indices_count, data_index, allocator);
     }
   }
 }
@@ -115,17 +115,17 @@ build_bvh_transformed_data(
     uint32_t data_index = 0;
     node_t *node = cvector_as(&scene->node_repo, 0, node_t);
     build_bvh_node_transformed_data(
-      scene, 
-      node, 
+      scene,
+      node,
       node->transform,
       vertices, indices, indices_count, &data_index, allocator);
   }
 }
 
 
-bvh_t* 
+bvh_t*
 create_bvh_from_scene(
-  scene_t* scene, 
+  scene_t* scene,
   const allocator_t* allocator)
 {
   bvh_t* bvh = NULL;
@@ -146,18 +146,18 @@ create_bvh_from_scene(
     indices = (uint32_t**)allocator->mem_alloc(sizeof(uint32_t*) * mesh_count);
     assert(indices && "allocation failed!");
     indices_count = (uint32_t*)allocator->mem_alloc(
-      sizeof(uint32_t) * mesh_count); 
+      sizeof(uint32_t) * mesh_count);
     assert(indices && "allocation failed!");
 
     build_bvh_transformed_data(
       scene, vertices, indices, indices_count, allocator);
 
     bvh = bvh_create(
-      vertices, 
-      indices, 
-      indices_count, 
-      mesh_count, 
-      allocator, 
+      vertices,
+      indices,
+      indices_count,
+      mesh_count,
+      allocator,
       BVH_CONSTRUCT_NAIVE);
 
     for (uint32_t i = 0; i < mesh_count; ++i)

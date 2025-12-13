@@ -1,12 +1,12 @@
 /**
  * @file polygon.h
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2025-07-20
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #pragma once
 
@@ -15,7 +15,7 @@
 #include <memory>
 #include <converter/parsers/quake/topology/texture_data.h>
 #include <converter/parsers/quake/topology/edge.h>
-#include <math/c/vector3f.h>
+#include <math/vector3f.h>
 #include <collision/face.h>
 
 

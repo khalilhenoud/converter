@@ -1,12 +1,12 @@
 /**
  * @file textures.cpp
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-12-21
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include <assimp/scene.h>
 #include <assimp/types.h>
@@ -14,8 +14,8 @@
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
 #include <library/string/cstring.h>
-#include <entity/c/mesh/texture.h>
-#include <entity/c/scene/scene.h>
+#include <entity/mesh/texture.h>
+#include <entity/scene/scene.h>
 #include <converter/utils.h>
 #include <converter/parsers/assimp/textures.h>
 

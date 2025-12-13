@@ -1,12 +1,12 @@
 /**
  * @file meshes.cpp
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-12-21
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include <cassert>
 #include <functional>
@@ -16,24 +16,24 @@
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
 #include <library/string/cstring.h>
-#include <entity/c/mesh/mesh.h>
-#include <entity/c/scene/scene.h>
+#include <entity/mesh/mesh.h>
+#include <entity/scene/scene.h>
 #include <converter/utils.h>
 #include <converter/parsers/assimp/meshes.h>
 
 
 void
 populate_meshes(
-  scene_t *scene, 
-  const aiScene *pScene, 
+  scene_t *scene,
+  const aiScene *pScene,
   const allocator_t *allocator)
 {
   cvector_setup(&scene->mesh_repo, get_type_data(mesh_t), 4, allocator);
   cvector_resize(&scene->mesh_repo, pScene->mNumMeshes);
-  
+
   // NOTE: Currently assimp will decompose the mesh if it contains more than
   // one material, so basically a single material is specified. The rest of
-  // the materials can be found on identically named meshes. 
+  // the materials can be found on identically named meshes.
   // Additionally no transform is assigned to the mesh, instead it uses the
   // transform attached to the parent node.
   for (uint32_t i = 0; i < scene->mesh_repo.size; ++i) {
@@ -68,7 +68,7 @@ populate_meshes(
         target_vertex[2] = vertex->z;
       }
     }
-    
+
     cvector_setup(&mesh->normals, get_type_data(float), 0, allocator);
     cvector_resize(&mesh->normals, vertices_count * 3);
     memset(mesh->normals.data, 0, sizeof(float) * vertices_count * 3);
@@ -81,7 +81,7 @@ populate_meshes(
         target_normal[2] = normal->z;
       }
     }
-    
+
     // NOTE: Assimp supports 8 channels for vertices, we only consider the first
     cvector_setup(&mesh->uvs, get_type_data(float), 0, allocator);
     cvector_resize(&mesh->uvs, vertices_count * 3);

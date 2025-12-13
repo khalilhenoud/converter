@@ -1,20 +1,20 @@
 /**
  * @file brush.cpp
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2025-07-31
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #include <converter/parsers/quake/string_utils.h>
 #include <converter/parsers/quake/topology/brush.h>
 #include <converter/parsers/quake/topology/edge.h>
-#include <loaders/loader_map_data.h>
-#include <math/c/vector3f.h>
-#include <math/c/matrix4f.h>
-#include <math/c/face.h>
+#include <loaders/loader_map.h>
+#include <math/vector3f.h>
+#include <math/matrix4f.h>
+#include <math/face.h>
 
 
 namespace topology {
@@ -30,12 +30,12 @@ make_cube_face(
 
   polygon.normal = { 0, 0, 1.f };
   mult_set_m4f_v3f(transform, &polygon.normal);
-  
+
   polygon.points.push_back({unit, -unit, unit});
   polygon.points.push_back({-unit, -unit, unit});
   polygon.points.push_back({-unit, unit, unit});
   polygon.points.push_back({unit, unit, unit});
-  
+
   for (uint32_t i = 0; i < 4; ++i)
     mult_set_m4f_p3f(transform, &polygon.points[i]);
 
@@ -47,7 +47,7 @@ make_cube(const float scale)
 {
   constexpr float PI_D2 = K_PI / 2.f;
   std::vector<polygon_t> cube;
-  
+
   matrix4f transform[6];
   matrix4f_set_identity(&transform[0]);
   matrix4f_rotation_y(&transform[1], PI_D2);
@@ -63,7 +63,7 @@ make_cube(const float scale)
 }
 
 brush_t::brush_t(
-    const loader_map_brush_data_t* brush, 
+    const loader_map_brush_data_t* brush,
     std::unordered_map<std::string, texture_info_t>& textures_info)
 {
   for (uint32_t i = 0, count = brush->face_count; i < count; ++i) {
@@ -76,12 +76,12 @@ brush_t::brush_t(
     ::face_t face = { p1, p3, p2 };
     vector3f normal;
     get_faces_normals(&face, 1, &normal);
-    
+
     // read the texture data associated with the plane
     texture_data_t texture_data = {
-        { brush->faces[i].offset[0], brush->faces[i].offset[1] }, 
-        brush->faces[i].rotation, 
-        { brush->faces[i].scale[0], brush->faces[i].scale[1] } 
+        { brush->faces[i].offset[0], brush->faces[i].offset[1] },
+        brush->faces[i].rotation,
+        { brush->faces[i].scale[0], brush->faces[i].scale[1] }
       };
 
     std::string texture = string_utils::get_sanitized(brush->faces[i].texture);
@@ -212,12 +212,12 @@ brush_t::make_face(
 
   // flip the ordering if needed
   vector3f normal;
-  ::face_t nface = { polygon.points[0], polygon.points[1], polygon.points[2] }; 
+  ::face_t nface = { polygon.points[0], polygon.points[1], polygon.points[2] };
   get_faces_normals(&nface, 1, &normal);
 
   if (dot_product_v3f(&normal, &polygon.normal) < 0.f)
     std::reverse(polygon.points.begin(), polygon.points.end());
-  
+
   return polygon;
 }
 

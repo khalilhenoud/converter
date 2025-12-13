@@ -1,12 +1,12 @@
 /**
  * @file bvhs.cpp
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2025-03-09
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #include <cassert>
 #include <functional>
@@ -16,15 +16,15 @@
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
 #include <library/string/cstring.h>
-#include <entity/c/spatial/bvh.h>
-#include <entity/c/scene/scene.h>
+#include <entity/spatial/bvh.h>
+#include <entity/scene/scene.h>
 #include <converter/utils.h>
 #include <converter/parsers/quake/bvh_utils.h>
 
 
 void
 populate_bvhs(
-  scene_t *scene, 
+  scene_t *scene,
   const allocator_t *allocator)
 {
   // for now limit it to 1.

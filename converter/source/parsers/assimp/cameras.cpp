@@ -1,12 +1,12 @@
 /**
  * @file cameras.cpp
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2024-03-03
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 #include <cassert>
 #include <functional>
@@ -16,16 +16,16 @@
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
 #include <library/string/cstring.h>
-#include <entity/c/scene/camera.h>
-#include <entity/c/scene/scene.h>
+#include <entity/scene/camera.h>
+#include <entity/scene/scene.h>
 #include <converter/utils.h>
 #include <converter/parsers/assimp/lights.h>
 
 
 void
 populate_cameras(
-  scene_t *scene, 
-  const aiScene *pScene, 
+  scene_t *scene,
+  const aiScene *pScene,
   const allocator_t *allocator)
 {
   cvector_setup(&scene->camera_repo, get_type_data(camera_t), 4, allocator);

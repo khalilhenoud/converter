@@ -1,12 +1,12 @@
 /**
  * @file loader.cpp
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2024-03-17
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 #include <iostream>
 #include <vector>
@@ -29,7 +29,7 @@
 #include <converter/parsers/assimp/cameras.h>
 #include <converter/parsers/assimp/fonts.h>
 #include <converter/parsers/assimp/bvhs.h>
-#include <entity/c/scene/scene.h>
+#include <entity/scene/scene.h>
 
 
 extern std::string data_folder;
@@ -37,26 +37,26 @@ extern std::string tools_folder;
 
 void
 load_assimp(
-  const char* scene_file, 
+  const char* scene_file,
   const allocator_t* allocator)
 {
   Assimp::Importer Importer;
   const aiScene* pScene = Importer.ReadFile(
-    scene_file, 
-    aiProcess_Triangulate | 
-    aiProcess_GenSmoothNormals | 
-    aiProcess_FlipUVs | 
+    scene_file,
+    aiProcess_Triangulate |
+    aiProcess_GenSmoothNormals |
+    aiProcess_FlipUVs |
     aiProcess_JoinIdenticalVertices);
 
   if (!pScene)
     printf(
-      "Error parsing '%s': '%s'\n", scene_file, 
+      "Error parsing '%s': '%s'\n", scene_file,
       Importer.GetErrorString());
   else {
     printf("Parsing was successful");
 
     scene_t *scene = scene_create(NULL, allocator);
-    auto textures = 
+    auto textures =
     populate_materials(scene, pScene, allocator);
     populate_textures(scene, allocator, textures);
     populate_lights(scene, pScene, allocator);
@@ -73,7 +73,7 @@ load_assimp(
     std::string texture_target_path = target_path + "\\textures";
     ensure_clean_directory(texture_target_path);
     copy_files(texture_target_path + "\\", textures);
-    
+
     // serialize the bin file.
     std::string target_bin = target_path + "\\" + name + ".bin";
     binary_stream_t stream;
@@ -83,15 +83,15 @@ load_assimp(
 
     {
       file_handle_t file;
-      file = open_file(target_bin.c_str(), 
+      file = open_file(target_bin.c_str(),
         file_open_flags_t(FILE_OPEN_MODE_WRITE | FILE_OPEN_MODE_BINARY));
       assert((void *)file != NULL);
       write_buffer(
-        file, 
+        file,
         stream.data->data, stream.data->elem_data.size, stream.data->size);
       close_file(file);
     }
-    
+
     binary_stream_cleanup(&stream);
     scene_free(scene, allocator);
   }

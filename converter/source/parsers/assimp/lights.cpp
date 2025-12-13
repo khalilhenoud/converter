@@ -1,12 +1,12 @@
 /**
  * @file lights.cpp
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2024-01-21
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 #include <cassert>
 #include <functional>
@@ -14,16 +14,16 @@
 #include <assimp/types.h>
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
-#include <entity/c/scene/light.h>
-#include <entity/c/scene/scene.h>
+#include <entity/scene/light.h>
+#include <entity/scene/scene.h>
 #include <converter/utils.h>
 #include <converter/parsers/assimp/lights.h>
 
 
 void
 populate_lights(
-  scene_t *scene, 
-  const aiScene* pScene, 
+  scene_t *scene,
+  const aiScene* pScene,
   const allocator_t* allocator)
 {
   cvector_setup(&scene->light_repo, get_type_data(light_t), 1, allocator);
@@ -52,16 +52,16 @@ populate_lights(
     copy_float(&light->inner_cone, &pLight->mAngleInnerCone, AI_SUCCESS);
     copy_float(&light->outer_cone, &pLight->mAngleOuterCone, AI_SUCCESS);
     copy_float(
-      &light->attenuation_constant, 
-      &pLight->mAttenuationConstant, 
+      &light->attenuation_constant,
+      &pLight->mAttenuationConstant,
       AI_SUCCESS);
     copy_float(
-      &light->attenuation_linear, 
-      &pLight->mAttenuationLinear, 
+      &light->attenuation_linear,
+      &pLight->mAttenuationLinear,
       AI_SUCCESS);
     copy_float(
-      &light->attenuation_quadratic, 
-      &pLight->mAttenuationQuadratic, 
+      &light->attenuation_quadratic,
+      &pLight->mAttenuationQuadratic,
       AI_SUCCESS);
     copy_color(&light->diffuse, &pLight->mColorDiffuse, AI_SUCCESS);
     copy_color(&light->specular, &pLight->mColorSpecular, AI_SUCCESS);
@@ -73,8 +73,8 @@ populate_lights(
       light->type = LIGHT_TYPE_POINT;
     else if (pLight->mType == aiLightSource_SPOT)
       light->type = LIGHT_TYPE_SPOT;
-    else 
-      // NOTE: aiLightSource_AMBIENT and aiLightSource_AREA are currently not 
+    else
+      // NOTE: aiLightSource_AMBIENT and aiLightSource_AREA are currently not
       // supported. So we default them to a point light.
       light->type = LIGHT_TYPE_POINT;
   }

@@ -1,12 +1,12 @@
 /**
  * @file nodes.cpp
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-12-21
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #include <cassert>
 #include <functional>
@@ -16,20 +16,20 @@
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
 #include <library/string/cstring.h>
-#include <entity/c/scene/node.h>
-#include <entity/c/scene/scene.h>
+#include <entity/scene/node.h>
+#include <entity/scene/scene.h>
 #include <converter/utils.h>
 #include <converter/parsers/assimp/nodes.h>
 
 
 void
 populate_nodes(
-  scene_t *scene, 
-  const aiScene* pScene, 
+  scene_t *scene,
+  const aiScene* pScene,
   const allocator_t* allocator)
 {
   // read the nodes.
-  std::function<uint32_t(aiNode*)> count_nodes = 
+  std::function<uint32_t(aiNode*)> count_nodes =
   [&](aiNode* node) -> uint32_t {
     uint32_t total = node->mNumChildren;
     for (uint32_t i = 0; i < node->mNumChildren; ++i)
@@ -37,18 +37,18 @@ populate_nodes(
     return total;
   };
 
-  std::function<void(uint32_t&, node_t*, aiNode*)> 
+  std::function<void(uint32_t&, node_t*, aiNode*)>
   populate_node = [&](
-    uint32_t& model_index, 
-    node_t *target, 
+    uint32_t& model_index,
+    node_t *target,
     aiNode *source) {
 
     ++model_index;
 
     ::matrix4f_set_identity(&target->transform);
     aiMatrix4x4& transform = source->mTransformation;
-    float data[16] = { 
-      transform.a1, transform.a2, transform.a3, transform.a4, 
+    float data[16] = {
+      transform.a1, transform.a2, transform.a3, transform.a4,
       transform.b1, transform.b2, transform.b3, transform.b4,
       transform.c1, transform.c2, transform.c3, transform.c4,
       transform.d1, transform.d2, transform.d3, transform.d4};
@@ -61,7 +61,7 @@ populate_nodes(
     if (source->mNumMeshes)
       memcpy(target->meshes.data, source->mMeshes,
         sizeof(uint32_t) * source->mNumMeshes);
-    
+
     cvector_setup(&target->nodes, get_type_data(uint32_t), 0, allocator);
     cvector_resize(&target->nodes, source->mNumChildren);
     if (source->mNumChildren) {

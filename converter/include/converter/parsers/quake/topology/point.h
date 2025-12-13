@@ -1,16 +1,16 @@
 /**
  * @file point.h
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2025-07-20
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #pragma once
 
-#include <math/c/vector3f.h>
+#include <math/vector3f.h>
 
 
 namespace topology {

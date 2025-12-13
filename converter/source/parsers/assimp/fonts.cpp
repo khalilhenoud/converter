@@ -1,19 +1,19 @@
 /**
  * @file fonts.cpp
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2025-03-08
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #include <cassert>
 #include <functional>
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
-#include <entity/c/misc/font.h>
-#include <entity/c/scene/scene.h>
+#include <entity/misc/font.h>
+#include <entity/scene/scene.h>
 #include <converter/parsers/assimp/fonts.h>
 
 

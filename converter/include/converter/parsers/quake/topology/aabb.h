@@ -1,19 +1,19 @@
 /**
  * @file aabb.h
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2025-10-04
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #pragma once
 
 #include <cmath>
 #include <cassert>
 #include <vector>
-#include <math/c/vector3f.h>
+#include <math/vector3f.h>
 
 
 namespace topology {
@@ -21,7 +21,7 @@ namespace topology {
 class aabb_t {
 public:
   aabb_t(
-    const point3f& _min, 
+    const point3f& _min,
     const point3f& _max)
     : min{_min}
     , max{_max}
@@ -58,7 +58,7 @@ public:
     return *this;
   }
 
-  aabb_t 
+  aabb_t
   operator+(const aabb_t& rhs) const
   {
     aabb_t copy = *this;
@@ -91,11 +91,11 @@ public:
   bool
   interesect(const aabb_t& other) const
   {
-    bool no_intersect_x = 
+    bool no_intersect_x =
       min.data[0] > other.max.data[0] || max.data[0] < other.min.data[0];
-    bool no_intersect_y = 
+    bool no_intersect_y =
       min.data[1] > other.max.data[1] || max.data[1] < other.min.data[1];
-    bool no_intersect_z = 
+    bool no_intersect_z =
       min.data[2] > other.max.data[2] || max.data[2] < other.min.data[2];
     return !(no_intersect_x || no_intersect_y || no_intersect_z);
   }

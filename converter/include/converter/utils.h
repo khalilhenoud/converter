@@ -1,12 +1,12 @@
 /**
  * @file utils.h
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2023-12-21
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #pragma once
 
@@ -16,9 +16,9 @@
 #include <filesystem>
 #include <assimp/types.h>
 #include <assimp/material.h>
-#include <math/c/vector3f.h>
-#include <entity/c/mesh/material.h>
-#include <entity/c/mesh/color.h>
+#include <math/vector3f.h>
+#include <entity/mesh/material.h>
+#include <entity/mesh/color.h>
 
 
 typedef struct allocator_t allocator_t;
@@ -26,7 +26,7 @@ struct aiScene;
 
 inline
 void
-copy_float(float* target, float* source, aiReturn do_copy) 
+copy_float(float* target, float* source, aiReturn do_copy)
 {
   if (do_copy == AI_SUCCESS)
     *target = *source;
@@ -35,9 +35,9 @@ copy_float(float* target, float* source, aiReturn do_copy)
 inline
 void
 copy_color(
-  color_rgba_t* target, 
-  aiColor4D* source, 
-  aiReturn do_copy) 
+  color_rgba_t* target,
+  aiColor4D* source,
+  aiReturn do_copy)
 {
   if (do_copy == AI_SUCCESS) {
     target->data[0] = source->r;
@@ -50,9 +50,9 @@ copy_color(
 inline
 void
 copy_color(
-  color_rgba_t* target, 
-  aiColor3D* source, 
-  aiReturn do_copy) 
+  color_rgba_t* target,
+  aiColor3D* source,
+  aiReturn do_copy)
 {
   if (do_copy == AI_SUCCESS) {
     target->data[0] = source->r;
@@ -65,8 +65,8 @@ copy_color(
 inline
 void
 copy_vec3(
-  vector3f *target, 
-  aiVector3D *source, 
+  vector3f *target,
+  aiVector3D *source,
   aiReturn do_copy)
 {
   if (do_copy == AI_SUCCESS) {
@@ -77,11 +77,11 @@ copy_vec3(
 }
 
 inline
-void 
+void
 copy_texture_transform(
-  texture_properties_t* target, 
+  texture_properties_t* target,
   aiUVTransform* source,
-  aiReturn do_copy) 
+  aiReturn do_copy)
 {
   if (do_copy == AI_SUCCESS) {
     target->angle = source->mRotation;
@@ -123,7 +123,7 @@ get_simple_name(std::string path)
 {
   path = path.substr(path.find_last_of("/\\") + 1);
   std::string with_extension = path;
-  std::string extension = 
+  std::string extension =
     with_extension.substr(with_extension.find_last_of("."));
   return path.substr(0, path.length() - extension.length());
 }
@@ -134,7 +134,7 @@ get_extension(std::string path)
 {
   path = path.substr(path.find_last_of("/\\") + 1);
   std::string with_extension = path;
-  std::string extension = 
+  std::string extension =
     with_extension.substr(with_extension.find_last_of(".") + 1);
   return extension;
 }
@@ -149,5 +149,5 @@ copy_files(std::string target_dir, std::vector<std::string> files)
     target_path = target_dir + target_path;
     bool success = std::filesystem::copy_file(file, target_path);
     assert(success);
-  } 
+  }
 }

@@ -1,12 +1,12 @@
 /**
  * @file map.cpp
  * @author khalilhenoud@gmail.com
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2024-03-03
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 #include <unordered_map>
 #include <algorithm>
@@ -17,20 +17,20 @@
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
 #include <library/string/cstring.h>
-#include <math/c/vector3f.h>
-#include <math/c/face.h>
-#include <entity/c/spatial/bvh.h>
-#include <entity/c/mesh/mesh.h>
-#include <entity/c/mesh/mesh_utils.h>
-#include <entity/c/mesh/color.h>
-#include <entity/c/mesh/texture.h>
-#include <entity/c/mesh/material.h>
-#include <entity/c/misc/font.h>
-#include <entity/c/scene/light.h>
-#include <entity/c/scene/camera.h>
-#include <entity/c/scene/node.h>
-#include <entity/c/scene/scene.h>
-#include <loaders/loader_map_data.h>
+#include <math/vector3f.h>
+#include <math/face.h>
+#include <entity/spatial/bvh.h>
+#include <entity/mesh/mesh.h>
+#include <entity/mesh/mesh_utils.h>
+#include <entity/mesh/color.h>
+#include <entity/mesh/texture.h>
+#include <entity/mesh/material.h>
+#include <entity/misc/font.h>
+#include <entity/scene/light.h>
+#include <entity/scene/camera.h>
+#include <entity/scene/node.h>
+#include <entity/scene/scene.h>
+#include <loaders/loader_map.h>
 #include <loaders/loader_png.h>
 #include <converter/utils.h>
 #include <converter/parsers/quake/topology/brush.h>
@@ -65,8 +65,8 @@ free_texture_data(
 static
 texture_vec_t
 load_texture_data(
-  const char* scene_file, 
-  std::string wad_directory, 
+  const char* scene_file,
+  std::string wad_directory,
   texture_map_t& tex_map,
   const allocator_t* allocator)
 {
@@ -86,7 +86,7 @@ load_texture_data(
     wadfile += ".wad";
     auto wad_canonical = std::filesystem::canonical(wadfile).string();
 
-    // ensure the extraction directory is created and clean. Set it as the 
+    // ensure the extraction directory is created and clean. Set it as the
     // current path so we can extract into it.
     ensure_clean_directory(directory);
     auto previous_path = std::filesystem::current_path();
@@ -111,7 +111,7 @@ load_texture_data(
     // get the simple texture name (no extention, no path).
     name = name.substr(name.find_last_of("\\") + 1);
     name = name.substr(0, name.find_last_of("."));
-    // remove '_fbr', qpakman appends '_fbr' to some textures after extraction. 
+    // remove '_fbr', qpakman appends '_fbr' to some textures after extraction.
     // in addition it automatically replaces os unsafe tokens with substrings
     // e.g: '*' becomes 'star_'.
     auto path = name + ".png";
@@ -135,13 +135,13 @@ populate_scene(
 {
   {
     cvector_setup(
-      &scene->texture_repo, 
-      get_type_data(texture_t), 
+      &scene->texture_repo,
+      get_type_data(texture_t),
       tex_map.size(), allocator);
     cvector_resize(&scene->texture_repo, tex_map.size());
     cvector_setup(
-      &scene->material_repo, 
-      get_type_data(material_t), 
+      &scene->material_repo,
+      get_type_data(material_t),
       tex_map.size(), allocator);
     cvector_resize(&scene->material_repo, tex_map.size());
 
@@ -149,7 +149,7 @@ populate_scene(
       uint32_t i = entry.second.index;
       texture_t *texture = cvector_as(&scene->texture_repo, i, texture_t);
       cstring_setup(&texture->path, entry.second.path.c_str(), allocator);
-      
+
       {
         material_t *material = cvector_as(&scene->material_repo, i, material_t);
         material_def(material);
@@ -168,7 +168,7 @@ populate_scene(
         material->specular.data[1] =
         material->specular.data[2] = 0.6f;
         material->specular.data[3] = 1.f;
-        
+
         material->textures.used = 1;
         memset(material->textures.data, 0, sizeof(material->textures.data));
         material->textures.data->index = i;
@@ -179,12 +179,12 @@ populate_scene(
   {
     // create as many mesh as there are materials.
     cvector_setup(
-      &scene->mesh_repo, 
-      get_type_data(mesh_t), 
-      scene->material_repo.size, 
+      &scene->mesh_repo,
+      get_type_data(mesh_t),
+      scene->material_repo.size,
       allocator);
     cvector_resize(&scene->mesh_repo, scene->material_repo.size);
-    
+
     for (auto& entry : tex_map) {
       uint32_t i = entry.second.index;
       mesh_t *mesh = cvector_as(&scene->mesh_repo, i, mesh_t);
@@ -195,7 +195,7 @@ populate_scene(
       uint32_t face_count = face_indices.size();
       uint32_t vertices_count = face_count * 3;
       uint32_t sizef3 = sizeof(float) * 3;
-    
+
       cvector_setup(&mesh->vertices, get_type_data(float), 0, allocator);
       cvector_resize(&mesh->vertices, vertices_count * 3);
       cvector_setup(&mesh->normals, get_type_data(float), 0, allocator);
@@ -257,19 +257,19 @@ populate_scene(
     cvector_setup(&scene->camera_repo, get_type_data(camera_t), 4, allocator);
     cvector_resize(&scene->camera_repo, 1);
     camera_t *camera = cvector_as(&scene->camera_repo, 0, camera_t);
-    camera->position.data[0] = 
-    camera->position.data[1] = 
+    camera->position.data[0] =
+    camera->position.data[1] =
     camera->position.data[2] = 0.f;
 
     // transform the camera to y being up.
     node_t *node = cvector_as(&scene->node_repo, 0, node_t);
     mult_set_m4f_p3f(
-      &node->transform, 
+      &node->transform,
       &camera->position);
-    camera->lookat_direction.data[0] = 
+    camera->lookat_direction.data[0] =
     camera->lookat_direction.data[1] = 0.f;
     camera->lookat_direction.data[2] = -1.f;
-    camera->up_vector.data[0] = 
+    camera->up_vector.data[0] =
     camera->up_vector.data[2] = 0.f;
     camera->up_vector.data[1] = 1.f;
   }
@@ -285,9 +285,9 @@ populate_scene(
 
   {
     cvector_setup(
-      &scene->light_repo, 
-      get_type_data(light_t), 
-      map_data->lights.count, 
+      &scene->light_repo,
+      get_type_data(light_t),
+      map_data->lights.count,
       allocator);
     cvector_resize(&scene->light_repo, map_data->lights.count);
     node_t *node = cvector_as(&scene->node_repo, 0, node_t);
@@ -303,7 +303,7 @@ populate_scene(
         s_light->position.data[1] = (float)m_light->origin[1];
         s_light->position.data[2] = (float)m_light->origin[2];
         mult_set_m4f_p3f(
-          &node->transform, 
+          &node->transform,
           &s_light->position);
         s_light->attenuation_constant = 1.f;
         s_light->attenuation_linear = 0.01f;
@@ -326,15 +326,15 @@ populate_scene(
 
   {
     // set the metadata.
-    scene->metadata.player_start.data[0] = (float)map_data->player_start[0]; 
-    scene->metadata.player_start.data[1] = (float)map_data->player_start[1]; 
+    scene->metadata.player_start.data[0] = (float)map_data->player_start[0];
+    scene->metadata.player_start.data[1] = (float)map_data->player_start[1];
     scene->metadata.player_start.data[2] = (float)map_data->player_start[2];
     scene->metadata.player_angle = (float)map_data->player_angle;
 
     node_t *node = cvector_as(&scene->node_repo, 0, node_t);
     // transform the start_position, is this required?
     mult_set_m4f_p3f(
-      &node->transform, 
+      &node->transform,
       &scene->metadata.player_start);
   }
 
@@ -366,7 +366,7 @@ map_to_meshes(
   // we only need the width and height
   std::unordered_map<std::string, topology::texture_info_t> textures_info;
   for (auto& entry : tex_map)
-    textures_info[entry.first] = { 
+    textures_info[entry.first] = {
       entry.second.png_data->width, entry.second.png_data->height };
 
   std::vector<topology::poly_brush_t> poly_brushes;
@@ -387,14 +387,14 @@ map_to_meshes(
       if (face.texture.size())
         tex_map[face.texture].indices.push_back(map_faces.size() + j);
     }
-    
+
     map_faces.insert(map_faces.end(), faces.begin(), faces.end());
   }
 
   populate_scene(
-    scene, 
-    map_data, 
-    map_faces, 
+    scene,
+    map_data,
+    map_faces,
     tex_map,
     allocator);
 }
@@ -402,24 +402,24 @@ map_to_meshes(
 texture_vec_t
 map_to_bin(
   const char* scene_file,
-  loader_map_data_t* map_data, 
+  loader_map_data_t* map_data,
   scene_t *scene,
   const allocator_t* allocator)
 {
   texture_map_t tex_map;
   texture_vec_t textures = load_texture_data(
-    scene_file, 
-    map_data->world.wad, 
+    scene_file,
+    map_data->world.wad,
     tex_map,
     allocator);
 
   map_to_meshes(
     scene,
-    scene_file, 
+    scene_file,
     map_data,
     tex_map,
     allocator);
-  
+
   free_texture_data(tex_map, allocator);
 
   return textures;
