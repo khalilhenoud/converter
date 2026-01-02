@@ -8,32 +8,36 @@
  * @copyright Copyright (c) 2024
  *
  */
-#include <iostream>
-#include <vector>
-#include <string>
 #include <filesystem>
-#include <library/allocator/allocator.h>
-#include <library/containers/cvector.h>
-#include <library/streams/binary_stream.h>
-#include <library/filesystem/io.h>
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <converter/parsers/assimp/loader.h>
-#include <converter/utils.h>
-#include <converter/parsers/assimp/nodes.h>
-#include <converter/parsers/assimp/meshes.h>
-#include <converter/parsers/assimp/materials.h>
-#include <converter/parsers/assimp/textures.h>
-#include <converter/parsers/assimp/lights.h>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <converter/parsers/assimp/bvhs.h>
 #include <converter/parsers/assimp/cameras.h>
 #include <converter/parsers/assimp/fonts.h>
-#include <converter/parsers/assimp/bvhs.h>
+#include <converter/parsers/assimp/lights.h>
+#include <converter/parsers/assimp/loader.h>
+#include <converter/parsers/assimp/materials.h>
+#include <converter/parsers/assimp/meshes.h>
+#include <converter/parsers/assimp/nodes.h>
+#include <converter/parsers/assimp/skinned_meshes.h>
+#include <converter/parsers/assimp/textures.h>
+#include <converter/utils.h>
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
 #include <entity/scene/scene.h>
+#include <library/allocator/allocator.h>
+#include <library/containers/cvector.h>
+#include <library/filesystem/io.h>
+#include <library/streams/binary_stream.h>
 
 
 extern std::string data_folder;
 extern std::string tools_folder;
+// TODO: This needs to change... The default args in the converter are not good
+// enough.
+static std::string defaulted_texture = "F:\\data\\textures\\default.png";
 
 void
 load_assimp(
@@ -61,6 +65,7 @@ load_assimp(
     populate_textures(scene, allocator, textures);
     populate_lights(scene, pScene, allocator);
     populate_meshes(scene, pScene, allocator);
+    populate_skinned_meshes(scene, pScene, allocator);
     populate_nodes(scene, pScene, allocator);
     populate_cameras(scene, pScene, allocator);
     populate_default_font(scene, allocator);
@@ -72,6 +77,11 @@ load_assimp(
     ensure_clean_directory(target_path);
     std::string texture_target_path = target_path + "\\textures";
     ensure_clean_directory(texture_target_path);
+    auto non_existing = filter_existing(textures);
+    replace_missing_files(
+      texture_target_path + "\\",
+      non_existing,
+      defaulted_texture);
     copy_files(texture_target_path + "\\", textures);
 
     // serialize the bin file.

@@ -23,6 +23,7 @@
 #include <entity/mesh/mesh.h>
 #include <entity/mesh/mesh_utils.h>
 #include <entity/mesh/color.h>
+#include <entity/mesh/skinned_mesh.h>
 #include <entity/mesh/texture.h>
 #include <entity/mesh/material.h>
 #include <entity/misc/font.h>
@@ -177,6 +178,15 @@ populate_scene(
   }
 
   {
+    // initialize empty skinned meshes vector
+    cvector_setup(
+      &scene->skinned_mesh_repo,
+      get_type_data(skinned_mesh_t),
+      0,
+      allocator);
+  }
+
+  {
     // create as many mesh as there are materials.
     cvector_setup(
       &scene->mesh_repo,
@@ -244,10 +254,15 @@ populate_scene(
     node_t *node = cvector_as(&scene->node_repo, 0, node_t);
     node_def(node);
     cstring_setup(&node->name, "", allocator);
-    cvector_setup(&node->meshes, get_type_data(uint32_t), 0, allocator);
-    cvector_resize(&node->meshes, scene->mesh_repo.size);
-    for (uint32_t i = 0; i < scene->mesh_repo.size; ++i)
-      *cvector_as(&node->meshes, i, uint32_t) = i;
+    cvector_setup(
+      &node->resources, get_type_data(node_resource_t), 0, allocator);
+    cvector_resize(&node->resources, scene->mesh_repo.size);
+    for (uint32_t i = 0; i < scene->mesh_repo.size; ++i) {
+      node_resource_t *resource = cvector_as(
+        &node->resources, i, node_resource_t);
+      resource->type_id = get_type_id(mesh_t);
+      resource->index = i;
+    }
     cvector_setup(&node->nodes, get_type_data(uint32_t), 0, allocator);
     matrix4f_rotation_x(&node->transform, -K_PI/2.f);
   }

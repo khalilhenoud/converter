@@ -71,16 +71,21 @@ build_bvh_node_transformed_data(
 {
   {
     // populate the transformed mesh data.
-    for (uint32_t i = 0; i < node->meshes.size; ) {
-      uint32_t mesh_index = *cvector_as(&node->meshes, i, uint32_t);
-      mesh_t *tmp = cvector_as(&scene->mesh_repo, mesh_index, mesh_t);
-      if (tmp->indices.size) {
-        build_bvh_node_mesh_transformed_data(
-          scene,
-          mesh_index,
-          transform,
-          vertices, indices, indices_count, data_index, allocator);
+    for (uint32_t i = 0; i < node->resources.size; ) {
+      node_resource_t &resource = *cvector_as(
+        &node->resources, i, node_resource_t);
+      if (resource.type_id == get_type_id(mesh_t)) {
+        uint32_t mesh_index = resource.index;
+        mesh_t *tmp = cvector_as(&scene->mesh_repo, mesh_index, mesh_t);
+        if (tmp->indices.size) {
+          build_bvh_node_mesh_transformed_data(
+            scene,
+            mesh_index,
+            transform,
+            vertices, indices, indices_count, data_index, allocator);
+        }
       }
+      
       ++i;
     }
 

@@ -29,11 +29,15 @@ populate_bvhs(
 {
   // for now limit it to 1.
   cvector_setup(&scene->bvh_repo, get_type_data(bvh_t), 0, allocator);
+
+  bvh_t *bvh = create_bvh_from_scene(scene, allocator);
+  if (!bvh)
+    return;
+
   cvector_resize(&scene->bvh_repo, 1);
   bvh_t *target = cvector_as(&scene->bvh_repo, 0, bvh_t);
   bvh_def(target);
 
-  bvh_t *bvh = create_bvh_from_scene(scene, allocator);
   // the types are binary compatible.
   cvector_fullswap(&bvh->normals, &target->normals);
   cvector_fullswap(&bvh->faces, &target->faces);

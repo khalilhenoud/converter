@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # add the executable
-add_executable(${PROJECT_NAME} 
+add_executable(${PROJECT_NAME}
 				./source/main.cpp
         ./source/parsers/quake/topology/point.cpp
         ./source/parsers/quake/topology/brush.cpp
@@ -26,12 +26,13 @@ add_executable(${PROJECT_NAME}
         ./source/parsers/assimp/fonts.cpp
         ./source/parsers/assimp/nodes.cpp
         ./source/parsers/assimp/meshes.cpp
+        ./source/parsers/assimp/skinned_meshes.cpp
         ./source/parsers/assimp/materials.cpp
         ./source/parsers/assimp/textures.cpp
         ./source/parsers/assimp/lights.cpp
         ./source/parsers/assimp/cameras.cpp
 				)
-			
+
 target_link_libraries(${PROJECT_NAME}
         PRIVATE collision
         PRIVATE assimp
@@ -39,7 +40,7 @@ target_link_libraries(${PROJECT_NAME}
         PRIVATE entity
 				)
 
-target_include_directories(${PROJECT_NAME} PUBLIC 
+target_include_directories(${PROJECT_NAME} PUBLIC
 							"${PROJECT_BINARY_DIR}"
 							"${PROJECT_SOURCE_DIR}/include"
 							)

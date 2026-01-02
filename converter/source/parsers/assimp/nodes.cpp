@@ -8,18 +8,22 @@
  * @copyright Copyright (c) 2023
  *
  */
+#include <algorithm>
 #include <cassert>
 #include <functional>
-#include <assimp/types.h>
+#include <vector>
+#include <converter/parsers/assimp/nodes.h>
+#include <converter/utils.h>
 #include <assimp/material.h>
 #include <assimp/scene.h>
+#include <assimp/types.h>
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
 #include <library/string/cstring.h>
+#include <entity/mesh/mesh.h>
+#include <entity/mesh/skinned_mesh.h>
 #include <entity/scene/node.h>
 #include <entity/scene/scene.h>
-#include <converter/utils.h>
-#include <converter/parsers/assimp/nodes.h>
 
 
 void
@@ -28,6 +32,31 @@ populate_nodes(
   const aiScene* pScene,
   const allocator_t* allocator)
 {
+  std::vector<uint32_t> meshes[2];      // static {0}, skinned {1}
+  for (uint32_t i = 0; i < pScene->mNumMeshes; ++i)
+    meshes[pScene->mMeshes[i]->HasBones() ? 1 : 0].push_back(i);
+
+  std::function<node_resource_t(uint32_t)> get_resource =
+  [&](uint32_t mesh_index) -> node_resource_t {
+    {
+      auto iter = std::find(meshes[0].begin(), meshes[0].end(), mesh_index);
+      if (iter != meshes[0].end()) {
+        uint32_t index = (uint32_t)std::distance(meshes[0].begin(), iter);
+        return node_resource_t { get_type_id(mesh_t), index };
+      }
+    }
+    {
+      auto iter = std::find(meshes[1].begin(), meshes[1].end(), mesh_index);
+      if (iter != meshes[1].end()) {
+        uint32_t index = (uint32_t)std::distance(meshes[1].begin(), iter);
+        return node_resource_t { get_type_id(skinned_mesh_t), index };
+      }
+    }
+
+    assert(false);
+    return node_resource_t { 0, 0 };
+  };
+
   // read the nodes.
   std::function<uint32_t(aiNode*)> count_nodes =
   [&](aiNode* node) -> uint32_t {
@@ -55,12 +84,14 @@ populate_nodes(
     memcpy(target->transform.data, data, sizeof(float) * 16);
 
     cstring_setup(&target->name, source->mName.C_Str(), allocator);
-    cvector_setup(&target->meshes, get_type_data(uint32_t), 0, allocator);
-    cvector_resize(&target->meshes, source->mNumMeshes);
-
-    if (source->mNumMeshes)
-      memcpy(target->meshes.data, source->mMeshes,
-        sizeof(uint32_t) * source->mNumMeshes);
+    cvector_setup(
+      &target->resources, get_type_data(node_resource_t), 0, allocator);
+    cvector_resize(&target->resources, source->mNumMeshes);
+    for (uint32_t i = 0; i < source->mNumMeshes; ++i) {
+      node_resource_t *resource = cvector_as(
+        &target->resources, i, node_resource_t);
+      *resource = get_resource(source->mMeshes[i]);
+    }
 
     cvector_setup(&target->nodes, get_type_data(uint32_t), 0, allocator);
     cvector_resize(&target->nodes, source->mNumChildren);

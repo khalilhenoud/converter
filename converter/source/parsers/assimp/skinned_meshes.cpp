@@ -1,20 +1,20 @@
 /**
- * @file meshes.cpp
+ * @file skeletal.cpp
  * @author khalilhenoud@gmail.com
  * @brief
  * @version 0.1
- * @date 2023-12-21
+ * @date 2025-12-14
  *
- * @copyright Copyright (c) 2023
+ * @copyright Copyright (c) 2025
  *
  */
 #include <cassert>
-#include <converter/parsers/assimp/meshes.h>
+#include <converter/parsers/assimp/skinned_meshes.h>
 #include <converter/utils.h>
 #include <assimp/material.h>
 #include <assimp/scene.h>
 #include <assimp/types.h>
-#include <entity/mesh/mesh.h>
+#include <entity/mesh/skinned_mesh.h>
 #include <entity/scene/scene.h>
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
@@ -23,11 +23,11 @@
 
 static
 uint32_t
-count_static_meshes(const aiScene *pScene)
+count_skinned_meshes(const aiScene *pScene)
 {
   uint32_t count = 0;
   for (uint32_t i = 0; i < pScene->mNumMeshes; ++i) {
-    if (!pScene->mMeshes[i]->HasBones())
+    if (pScene->mMeshes[i]->HasBones())
       ++count;
   }
 
@@ -35,13 +35,14 @@ count_static_meshes(const aiScene *pScene)
 }
 
 void
-populate_meshes(
+populate_skinned_meshes(
   scene_t *scene,
   const aiScene *pScene,
   const allocator_t *allocator)
 {
-  cvector_setup(&scene->mesh_repo, get_type_data(mesh_t), 4, allocator);
-  cvector_resize(&scene->mesh_repo, count_static_meshes(pScene));
+  cvector_setup(
+    &scene->skinned_mesh_repo, get_type_data(skinned_mesh_t), 4, allocator);
+  cvector_resize(&scene->skinned_mesh_repo, count_skinned_meshes(pScene));
 
   // NOTE: Currently assimp will decompose the mesh if it contains more than
   // one material, so basically a single material is specified. The rest of
@@ -49,10 +50,12 @@ populate_meshes(
   // Additionally no transform is assigned to the mesh, instead it uses the
   // transform attached to the parent node.
   for (uint32_t i = 0, scene_i = 0; i < pScene->mNumMeshes; ++i) {
-    if (pScene->mMeshes[i]->HasBones())
+    if (!pScene->mMeshes[i]->HasBones())
       continue;
 
-    mesh_t *mesh = cvector_as(&scene->mesh_repo, scene_i, mesh_t);
+    skinned_mesh_t *skinned_mesh = cvector_as(
+      &scene->skinned_mesh_repo, scene_i, skinned_mesh_t);
+    mesh_t *mesh = &skinned_mesh->mesh;
     ++scene_i;
     aiMesh *pMesh = pScene->mMeshes[i];
 
