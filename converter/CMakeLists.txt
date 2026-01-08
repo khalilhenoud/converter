@@ -25,6 +25,7 @@ add_executable(${PROJECT_NAME}
         ./source/parsers/assimp/bvhs.cpp
         ./source/parsers/assimp/fonts.cpp
         ./source/parsers/assimp/nodes.cpp
+        ./source/parsers/assimp/animations.cpp
         ./source/parsers/assimp/meshes.cpp
         ./source/parsers/assimp/skinned_meshes.cpp
         ./source/parsers/assimp/materials.cpp

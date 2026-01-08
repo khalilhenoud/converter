@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <assimp/types.h>
 #include <assimp/material.h>
+#include <math/quatf.h>
 #include <math/vector3f.h>
 #include <entity/mesh/material.h>
 #include <entity/mesh/color.h>
@@ -73,6 +74,21 @@ copy_vec3(
     target->data[0] = source->x;
     target->data[1] = source->y;
     target->data[2] = source->z;
+  }
+}
+
+inline
+void
+copy_quat(
+  quatf *target,
+  aiQuaternion *source,
+  aiReturn do_copy)
+{
+  if (do_copy == AI_SUCCESS) {
+    target->data[0] = source->x;
+    target->data[1] = source->y;
+    target->data[2] = source->z;
+    target->data[3] = source->w;
   }
 }
 

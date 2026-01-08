@@ -27,6 +27,7 @@
 #include <entity/mesh/texture.h>
 #include <entity/mesh/material.h>
 #include <entity/misc/font.h>
+#include <entity/scene/animation.h>
 #include <entity/scene/light.h>
 #include <entity/scene/camera.h>
 #include <entity/scene/node.h>
@@ -182,6 +183,15 @@ populate_scene(
     cvector_setup(
       &scene->skinned_mesh_repo,
       get_type_data(skinned_mesh_t),
+      0,
+      allocator);
+  }
+
+  {
+    // initialize empty animations vector
+    cvector_setup(
+      &scene->animation_repo,
+      get_type_data(animation_t),
       0,
       allocator);
   }

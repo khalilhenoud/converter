@@ -12,6 +12,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <converter/parsers/assimp/animations.h>
 #include <converter/parsers/assimp/bvhs.h>
 #include <converter/parsers/assimp/cameras.h>
 #include <converter/parsers/assimp/fonts.h>
@@ -66,6 +67,7 @@ load_assimp(
     populate_lights(scene, pScene, allocator);
     populate_meshes(scene, pScene, allocator);
     populate_skinned_meshes(scene, pScene, allocator);
+    populate_animations(scene, pScene, allocator);
     populate_nodes(scene, pScene, allocator);
     populate_cameras(scene, pScene, allocator);
     populate_default_font(scene, allocator);
