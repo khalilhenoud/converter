@@ -9,6 +9,9 @@
  *
  */
 #include <cassert>
+#include <cstring>
+#include <functional>
+#include <limits>
 #include <converter/parsers/assimp/skinned_meshes.h>
 #include <converter/utils.h>
 #include <assimp/material.h>
@@ -146,6 +149,91 @@ copy_bone_data(
   }
 }
 
+static
+void
+copy_skeleton_data(
+  skinned_mesh_t *skinned_mesh,
+  aiMesh *pMesh,
+  const aiScene *pScene,
+  const allocator_t *allocator)
+{
+  copy_bone_data(skinned_mesh, pMesh, pScene, allocator);
+
+  std::function<uint32_t(aiNode*)>
+  get_bone_index = [&](aiNode *target) {
+    for (uint32_t i = 0; i < skinned_mesh->bones.size; ++i) {
+      bone_t *bone = cvector_as(&skinned_mesh->bones, i, bone_t);
+      if (!strcmp(bone->name.str, target->mName.C_Str()))
+        return i;
+    }
+
+    return std::numeric_limits<uint32_t>::max();
+  };
+
+  std::function<bool(aiNode*)>
+  is_bone = [&](aiNode *target) {
+    uint32_t index = get_bone_index(target);
+    if (index != std::numeric_limits<uint32_t>::max())
+      return true;
+    return false;
+  };
+
+  std::function<aiNode*(aiNode *)>
+  get_starting_bone = [&](aiNode *target) {
+    if (is_bone(target))
+      return target;
+
+    for (uint32_t i = 0; i < target->mNumChildren; ++i)
+      if (aiNode *result = get_starting_bone(target->mChildren[i]))
+        return result;
+
+    return (aiNode *)nullptr;
+  };
+
+  std::function<void(aiNode *, uint32_t&)>
+  count_skel_bone_count = [&](aiNode *target, uint32_t& count) {
+    for (uint32_t i = 0; i < target->mNumChildren; ++i)
+      count_skel_bone_count(target->mChildren[i], ++count);
+  };
+
+  std::function<void(aiNode *, uint32_t&)>
+  populate_bone_structure = [&](aiNode *source, uint32_t& index) {
+    skel_node_t *target = cvector_as(
+      &skinned_mesh->skeleton.nodes, index, skel_node_t);
+
+    ::matrix4f_set_identity(&target->transform);
+    aiMatrix4x4& transform = source->mTransformation;
+    float data[16] = {
+      transform.a1, transform.a2, transform.a3, transform.a4,
+      transform.b1, transform.b2, transform.b3, transform.b4,
+      transform.c1, transform.c2, transform.c3, transform.c4,
+      transform.d1, transform.d2, transform.d3, transform.d4};
+    memcpy(target->transform.data, data, sizeof(float) * 16);
+
+    target->bone_index = get_bone_index(source);
+
+    cstring_setup(&target->name, source->mName.C_Str(), allocator);
+
+    cvector_setup(&target->skel_nodes, get_type_data(uint32_t), 0, allocator);
+    cvector_resize(&target->skel_nodes, source->mNumChildren);
+    for (uint32_t i = 0; i < source->mNumChildren; ++i) {
+      uint32_t *indices = cvector_as(&target->skel_nodes, i, uint32_t);
+      *indices = ++index;
+      populate_bone_structure(source->mChildren[i], index);
+    }
+  };
+
+  aiNode *skel_root = get_starting_bone(pScene->mRootNode);
+  assert(skel_root);
+  uint32_t count = 1;
+  count_skel_bone_count(skel_root, count);
+  cvector_setup(
+    &skinned_mesh->skeleton.nodes, get_type_data(skel_node_t), 0, allocator);
+  cvector_resize(&skinned_mesh->skeleton.nodes, count);
+  uint32_t index = 0;
+  populate_bone_structure(skel_root, index);
+}
+
 void
 populate_skinned_meshes(
   scene_t *scene,
@@ -167,6 +255,6 @@ populate_skinned_meshes(
     aiMesh *pMesh = pScene->mMeshes[i];
 
     copy_mesh_data(mesh, pMesh, pScene, allocator);
-    copy_bone_data(skinned_mesh, pMesh, pScene, allocator);
+    copy_skeleton_data(skinned_mesh, pMesh, pScene, allocator);
   }
 }

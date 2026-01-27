@@ -46,6 +46,9 @@ load_assimp(
   const allocator_t* allocator)
 {
   Assimp::Importer Importer;
+  // BX skeleton animation error:
+  // Work around for https://github.com/assimp/assimp/issues/4620
+  Importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
   const aiScene* pScene = Importer.ReadFile(
     scene_file,
     aiProcess_Triangulate |
@@ -66,6 +69,9 @@ load_assimp(
     populate_textures(scene, allocator, textures);
     populate_lights(scene, pScene, allocator);
     populate_meshes(scene, pScene, allocator);
+    // NOTE: skinned_meshes have a dependency on the nodes? how should we deal
+    // with this? Once we separate the different parsers, no anim scene would
+    // have geometry nodes. So that will sort itself out.
     populate_skinned_meshes(scene, pScene, allocator);
     populate_animations(scene, pScene, allocator);
     populate_nodes(scene, pScene, allocator);
