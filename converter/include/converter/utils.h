@@ -85,10 +85,10 @@ copy_quat(
   aiReturn do_copy)
 {
   if (do_copy == AI_SUCCESS) {
-    target->data[0] = source->x;
-    target->data[1] = source->y;
-    target->data[2] = source->z;
-    target->data[3] = source->w;
+    target->data[QUAT_S] = source->w;
+    target->data[QUAT_X] = source->x;
+    target->data[QUAT_Y] = source->y;
+    target->data[QUAT_Z] = source->z;
   }
 }
 
