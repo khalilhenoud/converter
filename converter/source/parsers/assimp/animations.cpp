@@ -74,7 +74,7 @@ populate_animations(
         copy_quat(&rotation->value, &aiRotation->mValue, AI_SUCCESS);
         aiVector3D scale(1.f);
         aiVector3D position(0.f);
-        aiMatrix4x4 rotmatrix(scale, rotation, position);
+        aiMatrix4x4 rotmatrix(scale, aiRotation->mValue, position);
         float data[16] = {
           rotmatrix.a1, rotmatrix.a2, rotmatrix.a3, rotmatrix.a4,
           rotmatrix.b1, rotmatrix.b2, rotmatrix.b3, rotmatrix.b4,
