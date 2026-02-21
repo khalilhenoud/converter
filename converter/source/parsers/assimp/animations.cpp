@@ -62,29 +62,12 @@ populate_animations(
         &anim_node->rotation_keys, get_type_data(rotation_key_t), 0, allocator);
       cvector_resize(&anim_node->rotation_keys, aiNodeAnim->mNumRotationKeys);
 
-      cvector_setup(
-        &anim_node->rotation_keys2, get_type_data(rotation_key2_t), 0, allocator);
-      cvector_resize(&anim_node->rotation_keys2, aiNodeAnim->mNumRotationKeys);
-
       for (uint32_t k = 0; k < aiNodeAnim->mNumRotationKeys; ++k) {
         rotation_key_t *rotation = cvector_as(
           &anim_node->rotation_keys, k, rotation_key_t);
         aiQuatKey *aiRotation = aiNodeAnim->mRotationKeys + k;
         rotation->time = (float)aiRotation->mTime;
         copy_quat(&rotation->value, &aiRotation->mValue, AI_SUCCESS);
-        aiVector3D scale(1.f);
-        aiVector3D position(0.f);
-        aiMatrix4x4 rotmatrix(scale, aiRotation->mValue, position);
-        float data[16] = {
-          rotmatrix.a1, rotmatrix.a2, rotmatrix.a3, rotmatrix.a4,
-          rotmatrix.b1, rotmatrix.b2, rotmatrix.b3, rotmatrix.b4,
-          rotmatrix.c1, rotmatrix.c2, rotmatrix.c3, rotmatrix.c4,
-          rotmatrix.d1, rotmatrix.d2, rotmatrix.d3, rotmatrix.d4};
-
-        rotation_key2_t *rotationmt = cvector_as(
-          &anim_node->rotation_keys2, k, rotation_key2_t);
-        rotationmt->time = (float)aiRotation->mTime;
-        memcpy(rotationmt->value.data, data, sizeof(float) * 16);
       }
 
       cvector_setup(
