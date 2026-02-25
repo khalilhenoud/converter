@@ -46,6 +46,7 @@ load_assimp(
   const allocator_t* allocator)
 {
   Assimp::Importer Importer;
+  Importer.SetPropertyBool(AI_CONFIG_IMPORT_COLLADA_IGNORE_UNIT_SIZE, true);
   const aiScene* pScene = Importer.ReadFile(
     scene_file,
     aiProcess_Triangulate |
