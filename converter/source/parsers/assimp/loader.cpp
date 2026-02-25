@@ -46,9 +46,6 @@ load_assimp(
   const allocator_t* allocator)
 {
   Assimp::Importer Importer;
-  // BX skeleton animation error:
-  // Work around for https://github.com/assimp/assimp/issues/4620
-  Importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
   const aiScene* pScene = Importer.ReadFile(
     scene_file,
     aiProcess_Triangulate |
