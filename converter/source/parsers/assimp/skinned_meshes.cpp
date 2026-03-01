@@ -22,6 +22,7 @@
 #include <library/allocator/allocator.h>
 #include <library/containers/cvector.h>
 #include <library/string/cstring.h>
+#include <math/matrix4f.h>
 
 
 static
@@ -234,6 +235,39 @@ copy_skeleton_data(
   populate_bone_structure(skel_root, index);
 }
 
+static
+void
+adjust_child_bind_pose_transform(
+  skinned_mesh_t *skinned_mesh,
+  skel_node_t *node,
+  matrix4f parent_transform)
+{
+  cvector_t *nodes = &skinned_mesh->skeleton.nodes;
+
+  if (node->bone_index != UINT32_MAX) {
+    bone_t *bone = cvector_as(&skinned_mesh->bones, node->bone_index, bone_t);
+    matrix4f to_bind_pose = inverse_m4f(&bone->offset_matrix);
+    node->transform = mult_m4f(&parent_transform, &to_bind_pose);
+    for (uint32_t i = 0; i < node->skel_nodes.size; ++i) {
+      uint32_t index = *cvector_as(&node->skel_nodes, i, uint32_t);
+      skel_node_t *child = cvector_as(nodes, index, skel_node_t);
+      adjust_child_bind_pose_transform(
+        skinned_mesh, child, bone->offset_matrix);
+    }
+  }
+}
+
+static
+void
+adjust_skinned_mesh_node_bind_pose_transform(skinned_mesh_t *skinned_mesh)
+{
+  cvector_t *nodes = &skinned_mesh->skeleton.nodes;
+  skel_node_t *root = cvector_as(nodes, 0, skel_node_t);
+  matrix4f identity;
+  matrix4f_set_identity(&identity);
+  adjust_child_bind_pose_transform(skinned_mesh, root, identity);
+}
+
 void
 populate_skinned_meshes(
   scene_t *scene,
@@ -256,5 +290,6 @@ populate_skinned_meshes(
 
     copy_mesh_data(mesh, pMesh, pScene, allocator);
     copy_skeleton_data(skinned_mesh, pMesh, pScene, allocator);
+    adjust_skinned_mesh_node_bind_pose_transform(skinned_mesh);
   }
 }
